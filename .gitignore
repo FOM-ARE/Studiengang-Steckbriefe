@@ -1,0 +1,13 @@
+# Umgebungsvariablen (Passwörter!)
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# OS
+Thumbs.db
+.DS_Store

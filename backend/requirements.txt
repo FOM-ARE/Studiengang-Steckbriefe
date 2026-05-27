@@ -1,0 +1,7 @@
+flask
+flask-cors
+pyodbc
+apscheduler
+python-dotenv
+pymysql
+ldap3

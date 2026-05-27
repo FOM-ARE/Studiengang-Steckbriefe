@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FOM - Anmeldung</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --fom-primary: #00998a;
+            --fom-primary-dark: #007a6e;
+            --fom-primary-light: #33b3a6;
+            --fom-gray-200: #d1d7dc;
+        }
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+            background: linear-gradient(135deg, var(--fom-primary-light) 0%, var(--fom-primary) 50%, var(--fom-primary-dark) 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-box {
+            background: white;
+            border-radius: 12px;
+            padding: 40px 36px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            width: 360px;
+            max-width: 90vw;
+            text-align: center;
+        }
+        .login-box img {
+            height: 50px;
+            margin-bottom: 16px;
+            background: var(--fom-primary);
+            padding: 8px 14px;
+            border-radius: 6px;
+        }
+        .login-box h2 {
+            color: var(--fom-primary-dark);
+            margin-bottom: 24px;
+            font-size: 20px;
+        }
+        .login-box input {
+            width: 100%;
+            padding: 10px 14px;
+            margin-bottom: 14px;
+            border: 1px solid var(--fom-gray-200);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .login-box input:focus {
+            outline: none;
+            border-color: var(--fom-primary);
+        }
+        .login-box button {
+            width: 100%;
+            padding: 11px;
+            background: var(--fom-primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 4px;
+        }
+        .login-box button:hover { background: var(--fom-primary-dark); }
+        .login-box button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .login-error {
+            color: #c0392b;
+            font-size: 13px;
+            margin-top: 10px;
+            min-height: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <img src="assets/images/FOM-Logo-negativ.png" alt="FOM">
+        <h2>Studiengang-Steckbriefe</h2>
+        <form id="loginForm" autocomplete="on">
+            <input type="text" id="loginUser" placeholder="Benutzername (Windows-Login)" autocomplete="username" required>
+            <input type="password" id="loginPass" placeholder="Passwort" autocomplete="current-password" required>
+            <button type="submit" id="loginBtn">Anmelden</button>
+        </form>
+        <div class="login-error" id="loginError"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errEl = document.getElementById('loginError');
+            const btn = document.getElementById('loginBtn');
+            errEl.textContent = '';
+
+            const username = document.getElementById('loginUser').value.trim();
+            const password = document.getElementById('loginPass').value;
+
+            if (!username || !password) {
+                errEl.textContent = 'Bitte alle Felder ausfüllen.';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Anmeldung…';
+
+            try {
+                const res = await fetch(API_BASE + '/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (res.ok && data.ok) {
+                    window.location.href = 'index.html';
+                } else {
+                    errEl.textContent = data.error || 'Anmeldung fehlgeschlagen.';
+                }
+            } catch (err) {
+                errEl.textContent = 'Verbindung zum Server fehlgeschlagen.';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Anmelden';
+            }
+        });
+
+        // Falls bereits eingeloggt → direkt weiter
+        (async () => {
+            try {
+                const res = await fetch(API_BASE + '/me', { credentials: 'include' });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.authenticated) window.location.href = 'index.html';
+                }
+            } catch(e) {}
+        })();
+    </script>
+</body>
+</html>

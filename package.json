@@ -1,0 +1,177 @@
+{
+  "name": "FOM-Studiengang-Steckbriefe",
+  "version": "1.0.0",
+  "description": "Interaktive Webanwendung zur Darstellung von Studiengang-Steckbriefen mit Datenvisualisierung",
+  "author": "FOM Hochschule",
+  "license": "Internal Use",
+  "created": "2026-04-15",
+  "updated": "2026-04-15",
+  
+  "technical": {
+    "language": "HTML5 + CSS3 + JavaScript ES6+",
+    "framework": "Vanilla JS (kein Framework nötig)",
+    "visualization": "Chart.js 4.4.0",
+    "cdn": [
+      "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"
+    ],
+    "browser_support": [
+      "Chrome 90+",
+      "Firefox 88+",
+      "Safari 14+",
+      "Edge 90+"
+    ]
+  },
+  
+  "structure": {
+    "main_file": "index.html",
+    "size_html": "~140 KB",
+    "size_logo": "~50 KB",
+    "total_size": "~190 KB",
+    
+    "includes": [
+      "CSS (internal, ~500 lines)",
+      "JavaScript (internal, ~1300 lines)",
+      "Mock Data (6 programmes, 4 years of data)",
+      "Asset: Fom Logo.jpg"
+    ]
+  },
+  
+  "features": [
+    "5 Hochschulbereiche (HSB)",
+    "6 Studiengänge",
+    "Dynamische Tab-Navigation",
+    "HSZ-Filter pro Studiengang",
+    "Semester-Intelligenz (März-August = SS, Sept-Feb = WS)",
+    "Bar-Charts (Chart.js) für Trends",
+    "Doughnut-Charts für Verteilungen",
+    "Responsive Design",
+    "FOM-Branding",
+    "Tabellen mit Sortierung und Highlighting",
+    "Demografische Analysen",
+    "Abbrecherquoten-Vergleiche"
+  ],
+  
+  "tabs": [
+    "Rahmendaten - Akkreditierung, HSZ, Regelstudienzeit",
+    "Gesamtstudierende - Trends und Entwicklung",
+    "Studienbeginnerentwicklung - Neue Studierenden-Analyse",
+    "Anrechnungen - Verteilung von Anrechnungsarten",
+    "Stammdaten - Alter, Geschlecht, Herkunft",
+    "Studienerfolg - Abbrecherquoten, Erfolgsmetriken"
+  ],
+  
+  "data": {
+    "format": "Mock-Data (JSON-like structure inline)",
+    "years": ["2023", "2024", "2025", "2026"],
+    "semester_types": ["SS (Summer)", "WS (Winter)"],
+    "programmes": 6,
+    "hochschulbereiche": 5,
+    "total_data_rows": "80+ (ohne Duplikate)"
+  },
+  
+  "performance": {
+    "load_time": "< 1 second (local)",
+    "initial_download": "190 KB",
+    "external_requests": "1 (Chart.js from CDN)",
+    "interactivity": "Instant (no API calls)"
+  },
+  
+  "file_structure": {
+    "root": {
+      "index.html": "Hauptapplikation (140 KB, eigenständig)",
+      "README.md": "Überblick",
+      "package.json": "Diese Datei (Metadaten)",
+      "docs": {
+        "INSTALLATION.md": "Installationsanleitung",
+        "DATENSTRUKTUR.md": "Mock-Daten Referenz",
+        "ENTWICKLUNG.md": "Developer Guide"
+      },
+      "Rahmengebendes": {
+        "Asgard-HO": {
+          "Allgemeines": {
+            "Fom Logo.jpg": "FOM Logo für Header (50 KB)"
+          }
+        }
+      },
+      "assets": "Für zukünftige Erweiterungen"
+    }
+  },
+  
+  "usage": {
+    "quick_start": [
+      "1. Öffne index.html direkt im Browser",
+      "2. oder: python -m http.server 8000",
+      "3. oder: npx http-server"
+    ],
+    "deployment": [
+      "Kopiere den ganzen Ordner auf Server",
+      "Serviere mit beliebigem HTTP-Server",
+      "Keine Installation nötig",
+      "Keine Abhängigkeiten außer Internet (für Chart.js)"
+    ]
+  },
+  
+  "key_functions": {
+    "getCurrentSemester": "Ermittelt aktuelles Semester automatisch",
+    "renderHSBGrid": "Zeigt Hochschulbereich-Übersicht",
+    "handleProgrammeChange": "Wechsel zu anderem Studiengang",
+    "handleHSZChange": "Hochschulzentrum-Filter",
+    "buildTrendsTable": "Tabelle mit intelligenter Sortierung",
+    "initChartsForTrends": "Chart.js Balkendiagramm"
+  },
+  
+  "data_sources": {
+    "current": "Mock-Data (inline)",
+    "future": [
+      "MariaDB (Staging)",
+      "SQL Server DWH",
+      "REST API"
+    ]
+  },
+  
+  "dependencies": {
+    "runtime": [
+      "Chart.js 4.4.0 (from CDN)"
+    ],
+    "development": [
+      "Text Editor (VS Code, Sublime, etc.)",
+      "Browser for testing"
+    ],
+    "optional": [
+      "Python 3+ (for local server)",
+      "Node.js (for http-server)"
+    ]
+  },
+  
+  "changelog": {
+    "1.0.0": {
+      "date": "2026-04-15",
+      "features": [
+        "Initial release",
+        "5 HSB mit 6 Studiengängen",
+        "HSZ-Filter pro Studiengang",
+        "Intelligentes Semester-System",
+        "Responsive Design",
+        "Chart.js Integration",
+        "6 Content-Tabs"
+      ]
+    }
+  },
+  
+  "metadata": {
+    "encoding": "UTF-8",
+    "language": "de-DE",
+    "timezone": "Europe/Berlin",
+    "created_by": "Development Team",
+    "repository": "Z:\\12_Hochschulinformationen bereitstellen\\Studiengang-Steckbrief\\",
+    "production_path": "Steckbrief-App-Production"
+  },
+  
+  "security": {
+    "data_classification": "Internal (Demo/Public Data)",
+    "contains_pii": false,
+    "requires_authentication": false,
+    "ssl_required": false,
+    "notes": "Diese Version nutzt Mock-Daten, keine echten Personendaten"
+  }
+}

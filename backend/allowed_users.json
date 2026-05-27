@@ -1,0 +1,10 @@
+{
+  "anke.rebach": {
+    "display_name": "Anke Rebach",
+    "role": "admin"
+  },
+  "abteilung.Hr.mitarbeiter": {
+    "display_name": "Abteilung HR Mitarbeiter",
+    "role": "admin"
+  }
+}
