@@ -1,0 +1,10 @@
+#Mit Techdocs verwenden wir MkDocs zur Erzeugung der Dokumentationsseiten aus den Markdown-Dateien.
+#Diese Template-Datei mkdocs.yml muss im Ordner docs/ liegen (wie index.md).
+
+site_name: StudiengangSteckbriefe  # Name der Anwendung/Komponente, wie sie in der Doku angezeigt werden soll
+docs_dir: docs  # Standardmäßig "docs" lassen
+nav:  # Navigationsstruktur der Dokumentation
+  - Home: index.md  # Startseite der Dokumentation
+  - Architecture: architecture.md
+  - <Kapitel-Name>: <markdown-datei.md>  
+  # Weitere Kapitel können hier hinzugefügt werden

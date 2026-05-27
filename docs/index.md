@@ -1,0 +1,1 @@
+# Dokumentation der Python-Anwendung – bitte projektspezifisch anpassen.

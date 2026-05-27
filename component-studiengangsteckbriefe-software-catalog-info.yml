@@ -1,0 +1,38 @@
+#Das "catalog-info" YAML file einer Komponente wird nach folgendem Schema benannt: component-anwendungsname-software-catalog-info.yaml 
+#(nur Kleinbuchstaben, keine Leer- oder Sonderzeichen, Bindestriche erlaubt)
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: studiengangsteckbriefe
+  title: StudiengangSteckbriefe
+  description: <Klare Beschreibung der Komponente oder des Services>
+  tags:               # Geben Sie hier 5 bis 10 technische oder fachliche Tags an. Für .NET-Anwendungen bitte immer "dotnet" als Tag angeben (z.B. dotnet, angular, docker, etc.)
+    - dotnet
+    - <tag2>
+    # ...
+  links:              # Fügen Sie nützliche Links hinzu (z.B. CI/CD, Dashboards, etc.)
+    - url: <url-zur-pipeline-oder-dashboard>
+      title: <Link-Titel>
+    # ...
+  annotations:           
+    dev.azure.com/project-slug: dev.azure.com/BCW-Gruppe/Hochschulorganisation Apps/StudiengangSteckbriefe  # Azure DevOps Projekt-Slug 
+    backstage.io/techdocs-ref: dir:.  # Lassen Sie dir:. wenn die Dokumentation im docs/ Ordner neben dieser Datei liegt
+spec:
+  domain: Hochschulorganisation Apps  # Name der fachlichen oder technischen Domäne
+  system: <systemname>   # Name des Systems, zu dem die Komponente gehört
+  type: service           
+  lifecycle: production 
+  owner: 
+  repository: https://dev.azure.com/BCW-Gruppe/Hochschulorganisation%20Apps/_git/StudiengangSteckbriefe
+  dependsOn:
+   #- component:default/BCW.EmailService (Beispiel)
+    - <kind:namespace/name>    # Abhängigkeiten (z.B. component:default/komponentenname, resource:default/ressourcenname)
+    # ...
+  consumesApis:
+    - <api:namespace/api-name> # Von der Komponente konsumierte APIs
+    #- api:default/BCW.HerkulesRechteViewerApi (Beispiel)
+    # ...
+  providesApis:
+    - <bereitgestellte-api>    # Von der Komponente bereitgestellte APIs
+    #- customer-api (Beispiel)
+    # ...

@@ -1,0 +1,22 @@
+name: $(Build.BuildId)-$(Build.SourceBranchName)
+trigger:
+  branches:
+    include:
+    - develop
+    - staging
+    - main
+    
+  paths:
+    exclude:
+    - build-pipeline.yml
+    - release-pipeline.yml
+    - docs/**
+    
+resources:
+  repositories:
+    - repository: BCWYamlTemplate
+      type: git
+      name: DevOps/BCWYamlTemplate
+      
+extends:
+  template: build/Python.yml@BCWYamlTemplate

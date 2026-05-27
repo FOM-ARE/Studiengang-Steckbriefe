@@ -1,0 +1,18 @@
+trigger: none
+pr: none
+
+resources:
+  pipelines:
+  - pipeline: BuildPipeline
+    source: StudiengangSteckbriefe Build # name of the triggering pipeline
+    trigger: true
+
+  repositories:
+  - repository: BCWYamlTemplate
+    type: git
+    name: DevOps/BCWYamlTemplate
+    
+extends:
+  template: release/Mirantis.yml@BCWYamlTemplate
+  parameters:
+    targetPort: 8080
