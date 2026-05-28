@@ -33,8 +33,14 @@ def load_keyvault_secrets(app):
     )
     client = SecretClient(vault_url=vault_url, credential=credential)
 
-    # Flask Secret Key
-    app.config["SECRET_KEY"] = client.get_secret("flask-secret-key").value
+    # Flask Secret Key (optional – Fallback: FLASK_SECRET_KEY-Umgebungsvariable)
+    try:
+        app.config["SECRET_KEY"] = client.get_secret("flask-secret-key").value
+    except Exception:
+        app.logger.warning(
+            "Secret 'flask-secret-key' nicht im Key Vault gefunden "
+            "– nutze FLASK_SECRET_KEY-Umgebungsvariable"
+        )
 
     # MariaDB Passwort
     app.config["MARIADB_PASSWORD"] = client.get_secret("mariadb-password").value
