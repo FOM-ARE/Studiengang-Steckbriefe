@@ -1,0 +1,134 @@
+import os
+
+
+def _azure_authority(tenant_id: str) -> str:
+    """Baut die Entra Authority-URL aus der Tenant-ID."""
+    if tenant_id:
+        return f"https://login.microsoftonline.com/{tenant_id}"
+    return "https://login.microsoftonline.com/common"
+
+
+class Config:
+    """Basis-Konfiguration. Werte werden per Umgebungsvariable ueberschrieben."""
+
+    SECRET_KEY = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key")
+    DEBUG = False
+    TESTING = False
+
+    # DWH (SQL Server via pyodbc)
+    DWH_HOST = os.environ.get("DWH_HOST", "ms-sql-107.bcw-intern.local")
+    DWH_PORT = os.environ.get("DWH_PORT", "1433")
+    DWH_DATABASE = os.environ.get("DWH_DATABASE", "BCW_DWH")
+    DWH_AUTHENTICATION = os.environ.get("DWH_AUTHENTICATION", "Windows")
+
+    # MariaDB (Konfigurations-DB)
+    MARIADB_HOST = os.environ.get("DB_HOST", "mariadb.bcw-intern.local")
+    MARIADB_PORT = int(os.environ.get("DB_PORT", "3306"))
+    MARIADB_USER = os.environ.get("DB_USER", "HochschulorgaApps")
+    MARIADB_PASSWORD = os.environ.get("DB_PASSWORD", "")
+    MARIADB_DATABASE = os.environ.get("DB_NAME", "HochschulorgaApps")
+    MARIADB_CHARSET = os.environ.get("DB_CHARSET", "utf8mb4")
+    MARIADB_SSL = os.environ.get("DB_SSL", "true").lower() == "true"
+
+    # Azure Credentials (Service Principal – fuer Key Vault UND Entra ID)
+    AZURE_CLIENT_ID = os.environ.get("AZURE_CLIENT_ID", "")
+    AZURE_CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET", "")
+    AZURE_TENANT_ID = os.environ.get("AZURE_TENANT_ID", "")
+
+    # Azure Key Vault
+    AZURE_KEYVAULT_URL = os.environ.get("AZURE_KEYVAULT_URL", "")
+
+    # Entra ID (MSAL) – gleicher Service Principal wie Key Vault
+    ENTRA_CLIENT_ID = os.environ.get("AZURE_CLIENT_ID", "")
+    ENTRA_CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET", "")
+    ENTRA_AUTHORITY = _azure_authority(os.environ.get("AZURE_TENANT_ID", ""))
+    ENTRA_REDIRECT_URI = os.environ.get(
+        "ENTRA_REDIRECT_URI", "http://localhost:5000/api/auth/callback"
+    )
+
+    # CORS
+    CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:8000").split(",")
+
+    # App
+    APP_NAME = "Studiengang-Steckbriefe"
+    PERMANENT_SESSION_LIFETIME_HOURS = 8
+
+
+class DevelopmentConfig(Config):
+    DEBUG = True
+
+    # Pipeline liefert: AZURE_CLIENT_ID_DEV, AZURE_CLIENT_SECRET_DEV, AZURE_TENANT_ID_DEV
+    AZURE_CLIENT_ID = os.environ.get("AZURE_CLIENT_ID_DEV", os.environ.get("AZURE_CLIENT_ID", ""))
+    AZURE_CLIENT_SECRET = os.environ.get(
+        "AZURE_CLIENT_SECRET_DEV", os.environ.get("AZURE_CLIENT_SECRET", "")
+    )
+    AZURE_TENANT_ID = os.environ.get("AZURE_TENANT_ID_DEV", os.environ.get("AZURE_TENANT_ID", ""))
+    ENTRA_CLIENT_ID = AZURE_CLIENT_ID
+    ENTRA_CLIENT_SECRET = AZURE_CLIENT_SECRET
+    ENTRA_AUTHORITY = _azure_authority(AZURE_TENANT_ID)
+
+
+class StagingConfig(Config):
+    DEBUG = False
+
+    # Pipeline: AZURE_CLIENT_ID_STAGING, AZURE_CLIENT_SECRET_STAGING, AZURE_TENANT_ID_STAGING
+    AZURE_CLIENT_ID = os.environ.get(
+        "AZURE_CLIENT_ID_STAGING", os.environ.get("AZURE_CLIENT_ID", "")
+    )
+    AZURE_CLIENT_SECRET = os.environ.get(
+        "AZURE_CLIENT_SECRET_STAGING", os.environ.get("AZURE_CLIENT_SECRET", "")
+    )
+    AZURE_TENANT_ID = os.environ.get(
+        "AZURE_TENANT_ID_STAGING", os.environ.get("AZURE_TENANT_ID", "")
+    )
+    ENTRA_CLIENT_ID = AZURE_CLIENT_ID
+    ENTRA_CLIENT_SECRET = AZURE_CLIENT_SECRET
+    ENTRA_AUTHORITY = _azure_authority(AZURE_TENANT_ID)
+
+
+class ProductionConfig(Config):
+    DEBUG = False
+
+    # Pipeline liefert: AZURE_CLIENT_ID_PROD, AZURE_CLIENT_SECRET_PROD, AZURE_TENANT_ID_PROD
+    AZURE_CLIENT_ID = os.environ.get("AZURE_CLIENT_ID_PROD", os.environ.get("AZURE_CLIENT_ID", ""))
+    AZURE_CLIENT_SECRET = os.environ.get(
+        "AZURE_CLIENT_SECRET_PROD", os.environ.get("AZURE_CLIENT_SECRET", "")
+    )
+    AZURE_TENANT_ID = os.environ.get("AZURE_TENANT_ID_PROD", os.environ.get("AZURE_TENANT_ID", ""))
+    ENTRA_CLIENT_ID = AZURE_CLIENT_ID
+    ENTRA_CLIENT_SECRET = AZURE_CLIENT_SECRET
+    ENTRA_AUTHORITY = _azure_authority(AZURE_TENANT_ID)
+
+    @classmethod
+    def init_app(cls, app):
+        """Validiert kritische Konfigurationswerte in Produktion."""
+        if not app.config.get("SECRET_KEY") or app.config["SECRET_KEY"] == "dev-secret-key":
+            raise RuntimeError("SECRET_KEY muss in Produktion gesetzt sein")
+        if not app.config.get("AZURE_KEYVAULT_URL"):
+            raise RuntimeError("AZURE_KEYVAULT_URL muss in Produktion gesetzt sein")
+        if not app.config.get("AZURE_CLIENT_ID"):
+            raise RuntimeError("AZURE_CLIENT_ID muss in Produktion gesetzt sein")
+        if not app.config.get("AZURE_TENANT_ID"):
+            raise RuntimeError("AZURE_TENANT_ID muss in Produktion gesetzt sein")
+
+
+class TestingConfig(Config):
+    TESTING = True
+    SECRET_KEY = "test-secret-key"
+    DWH_HOST = "localhost"
+    MARIADB_HOST = "localhost"
+    AZURE_CLIENT_ID = "test-client-id"
+    AZURE_CLIENT_SECRET = "test-client-secret"
+    AZURE_TENANT_ID = "test-tenant-id"
+    ENTRA_CLIENT_ID = "test-client-id"
+    ENTRA_CLIENT_SECRET = "test-client-secret"
+    ENTRA_AUTHORITY = "https://login.microsoftonline.com/test-tenant-id"
+
+
+config = {
+    "development": DevelopmentConfig,
+    "staging": StagingConfig,
+    "production": ProductionConfig,
+    "testing": TestingConfig,
+    "default": DevelopmentConfig,
+}

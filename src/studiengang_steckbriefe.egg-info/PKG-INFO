@@ -1,0 +1,72 @@
+Metadata-Version: 2.4
+Name: studiengang-steckbriefe
+Version: 14.0.0
+Summary: FOM Studiengang-Steckbriefe Backend
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: Flask>=3.0
+Requires-Dist: flask-cors>=5.0
+Requires-Dist: pyodbc>=5.0
+Requires-Dist: APScheduler>=4.0.0a5
+Requires-Dist: python-dotenv>=1.0
+Requires-Dist: pymysql>=1.1
+Requires-Dist: waitress>=3.0
+Requires-Dist: azure-identity>=1.17
+Requires-Dist: azure-keyvault-secrets>=4.8
+Requires-Dist: msal>=1.28
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+Requires-Dist: pytest-cov>=5.0; extra == "dev"
+Requires-Dist: ruff>=0.6; extra == "dev"
+
+# FOM Studiengang-Steckbriefe – Version 5
+
+Standalone-Webanwendung zur Darstellung von Studiengang-Steckbriefen mit Live-Daten aus dem DWH.
+
+## Schnellstart
+
+**Doppelklick auf `start_app.bat`** – startet Backend + Frontend und öffnet den Browser.
+
+Alternativ manuell:
+
+```bash
+# 1. Backend starten
+cd backend
+pip install -r requirements.txt
+python app.py
+
+# 2. Frontend starten (neues Terminal)
+python -m http.server 8000
+
+# 3. Browser öffnen: http://localhost:8000
+```
+
+## Voraussetzungen
+
+- Python 3.8+
+- Netzwerkzugang zu `ms-sql-107.bcw-intern.local` (Windows-Auth)
+- Pakete: `flask`, `flask-cors`, `pyodbc`, `apscheduler`
+
+## Projektstruktur
+
+```
+Studiengang_Steckbriefe_Version_5/
+├── index.html          ← Frontend (Single-Page-App)
+├── start_app.bat       ← Ein-Klick-Starter
+├── backend/
+│   ├── app.py          ← Flask-API (Port 5000)
+│   └── requirements.txt
+├── assets/images/      ← Bilder
+└── docs/               ← Dokumentation
+```
+
+## Ports
+
+| Dienst   | URL                    |
+|----------|------------------------|
+| Frontend | http://localhost:8000   |
+| Backend  | http://localhost:5000   |
+
+## Stand
+
+Erstellt am 22.04.2026 aus Version 4 mit allen PDF-Export-Optimierungen.

@@ -1,0 +1,114 @@
+"""Auth-Blueprint: Entra ID Login/Callback/Logout/Me."""
+
+import secrets
+from functools import wraps
+
+from flask import Blueprint, current_app, jsonify, redirect, request, session
+
+from studiengang_steckbriefe.services.auth import (
+    EntraIdAuth,
+    get_user_role,
+)
+
+auth_bp = Blueprint("auth", __name__)
+
+
+def login_required(f):
+    """Decorator: Prueft ob ein User eingeloggt ist."""
+
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        user = session.get("user")
+        if not user:
+            return jsonify({"error": "Nicht authentifiziert"}), 401
+        return f(*args, **kwargs)
+
+    return decorated
+
+
+def admin_required(f):
+    """Decorator: Prueft ob der User Admin-Rechte hat."""
+
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        user = session.get("user")
+        if not user:
+            return jsonify({"error": "Nicht authentifiziert"}), 401
+        if user.get("role") != "admin":
+            return jsonify({"error": "Keine Administratorrechte"}), 403
+        return f(*args, **kwargs)
+
+    return decorated
+
+
+@auth_bp.route("/api/auth/login")
+def login():
+    """Leitet den User zur Microsoft-Anmeldeseite weiter."""
+    try:
+        auth = EntraIdAuth(current_app)
+        state = secrets.token_urlsafe(32)
+        session["auth_state"] = state
+        auth_url = auth.get_auth_url(state=state)
+        return redirect(auth_url)
+    except Exception as exc:
+        current_app.logger.error("Entra ID Login fehlgeschlagen: %s", exc)
+        return jsonify({"error": "Authentifizierung nicht verfuegbar"}), 500
+
+
+@auth_bp.route("/api/auth/callback")
+def callback():
+    """Verarbeitet den Callback von Microsoft nach erfolgreicher Anmeldung."""
+    # State validieren (CSRF-Schutz)
+    state = request.args.get("state", "")
+    if state != session.pop("auth_state", None):
+        return jsonify({"error": "Ungültiger State-Parameter"}), 400
+
+    auth_code = request.args.get("code")
+    if not auth_code:
+        error = request.args.get("error_description", "Kein Authorization Code erhalten")
+        return jsonify({"error": error}), 400
+
+    auth = EntraIdAuth(current_app)
+    try:
+        result = auth.acquire_token(auth_code)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 401
+
+    # User-Info aus Token-Claims extrahieren
+    claims = result.get("id_token_claims", {})
+    username = claims.get("preferred_username", "").split("@")[0]
+    display_name = claims.get("name", username)
+
+    # Berechtigung pruefen
+    role = get_user_role(username)
+    if not role:
+        return jsonify({"error": "Keine Berechtigung fuer diese Anwendung"}), 403
+
+    # Session setzen
+    session.permanent = True
+    session["user"] = {
+        "username": username,
+        "display_name": display_name,
+        "email": claims.get("preferred_username", ""),
+        "role": role,
+    }
+
+    # Redirect zum Frontend
+    frontend_url = request.args.get("redirect", "/")
+    return redirect(frontend_url)
+
+
+@auth_bp.route("/api/auth/logout", methods=["POST"])
+def logout():
+    """Beendet die Session."""
+    session.clear()
+    return jsonify({"ok": True})
+
+
+@auth_bp.route("/api/auth/me")
+def me():
+    """Gibt den aktuellen Benutzer zurueck."""
+    user = session.get("user")
+    if not user:
+        return jsonify({"authenticated": False}), 401
+    return jsonify({"authenticated": True, "user": user})
