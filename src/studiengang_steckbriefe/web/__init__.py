@@ -53,13 +53,22 @@ def create_app(config_name: str | None = None) -> Flask:
     # Konfigurations-DB laden und SQL-Queries initialisieren
     if config_name != "testing":
         with app.app_context():
-            from studiengang_steckbriefe.services.config_db import reload_config
+            try:
+                from studiengang_steckbriefe.services.config_db import reload_config
 
-            reload_config()
+                reload_config()
 
-            from studiengang_steckbriefe.services.queries import init_queries
+                from studiengang_steckbriefe.services.queries import init_queries
 
-            init_queries()
+                init_queries()
+                app.config["DB_INIT_ERROR"] = None
+            except Exception as exc:
+                import traceback
+
+                app.logger.error(
+                    "DB-Initialisierung fehlgeschlagen: %s\n%s", exc, traceback.format_exc()
+                )
+                app.config["DB_INIT_ERROR"] = str(exc)
 
     # Blueprints registrieren
     from studiengang_steckbriefe.web.auth import auth_bp
