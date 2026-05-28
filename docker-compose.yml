@@ -1,0 +1,10 @@
+services:
+  app:
+    build: .
+    ports:
+      - "5000:8080"
+    env_file:
+      - .env
+    environment:
+      - FLASK_CONFIG=production
+    restart: unless-stopped
