@@ -8,6 +8,19 @@ def _azure_authority(tenant_id: str) -> str:
     return "https://login.microsoftonline.com/common"
 
 
+def _keyvault_url() -> str:
+    """Ermittelt die Key Vault URL – explizite Env-Var hat Vorrang, Fallback ueber APP_ENV."""
+    explicit = os.environ.get("AZURE_KEYVAULT_URL", "")
+    if explicit:
+        return explicit
+    mapping = {
+        "development": "https://kv-sgsteckbriefe-dev.vault.azure.net/",
+        "staging": "https://kv-sgsteckbriefe-stg.vault.azure.net/",
+        "production": "https://kv-sgsteckbriefe-prd.vault.azure.net/",
+    }
+    return mapping.get(os.environ.get("APP_ENV", ""), "")
+
+
 class Config:
     """Basis-Konfiguration. Werte werden per Umgebungsvariable ueberschrieben."""
 
@@ -35,8 +48,8 @@ class Config:
     AZURE_CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET", "")
     AZURE_TENANT_ID = os.environ.get("AZURE_TENANT_ID", "")
 
-    # Azure Key Vault
-    AZURE_KEYVAULT_URL = os.environ.get("AZURE_KEYVAULT_URL", "")
+    # Azure Key Vault (APP_ENV-basierter Fallback wenn AZURE_KEYVAULT_URL nicht gesetzt)
+    AZURE_KEYVAULT_URL = _keyvault_url()
 
     # Entra ID (MSAL) – gleicher Service Principal wie Key Vault
     ENTRA_CLIENT_ID = os.environ.get("AZURE_CLIENT_ID", "")

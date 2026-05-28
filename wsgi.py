@@ -11,15 +11,16 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 # Umgebungsspezifische .env-Datei laden (Fallback: .env)
-_env_name = os.environ.get("FLASK_CONFIG", "development")
+# FLASK_CONFIG hat Vorrang, APP_ENV wird als Fallback genutzt (gesetzt durch Mirantis-Template)
+_env_name = os.environ.get("FLASK_CONFIG") or os.environ.get("APP_ENV", "development")
 _env_file = f".env.{_env_name}"
 if os.path.isfile(_env_file):
     load_dotenv(_env_file)
 else:
     load_dotenv()
 
-config_name = os.environ.get("FLASK_CONFIG", "default")
-logger.info("Starting app with FLASK_CONFIG=%s", config_name)
+config_name = os.environ.get("FLASK_CONFIG") or os.environ.get("APP_ENV", "default")
+logger.info("Starting app with config=%s", config_name)
 
 _startup_error = None
 
