@@ -30,7 +30,9 @@ def pk_in_clause(produktkuerzel: str) -> tuple[str, list[str]]:
     return f"IN ({placeholders})", variants
 
 
-def pk_expand_sql(sql: str, produktkuerzel: str, count: int | None = None) -> tuple[str, list[str]]:
+def pk_expand_sql(
+    sql: str, produktkuerzel: str, count: int | None = None
+) -> tuple[str, list[str]]:
     """Ersetzt alle '= ?' Produktkuerzel-Filter durch 'IN (?,?,...)'.
 
     Args:
@@ -137,7 +139,8 @@ def get_studiengaenge() -> list[dict]:
                 "Studiengang": display_name,
                 "Hochschulbereich": r["Hochschulbereich"],
                 "HochschulbereichKuerzel": r["HochschulbereichKuerzel"],
-                "Abschluss": r.get("Abschluss") or ("Master" if pk.startswith("M") else "Bachelor"),
+                "Abschluss": r.get("Abschluss")
+                or ("Master" if pk.startswith("M") else "Bachelor"),
             }
 
     stud_map = merged_stud
@@ -158,7 +161,9 @@ def get_studiengaenge() -> list[dict]:
                 "farbe": hsb_cfg.get("farbe_hex", "#607D8B"),
                 "programmes": [],
             }
-        abschluss_raw = r.get("Abschluss") or ("Master" if pk.startswith("M") else "Bachelor")
+        abschluss_raw = r.get("Abschluss") or (
+            "Master" if pk.startswith("M") else "Bachelor"
+        )
         abschluss_kurz = "Master" if "master" in abschluss_raw.lower() else "Bachelor"
         hsb_map[hsb_kuerzel]["programmes"].append(
             {
@@ -220,8 +225,12 @@ def get_trends(produktkuerzel: str) -> dict:
     beginner_fom_avg_ss, beginner_fom_avg_ws = [], []
 
     for jahr in jahre:
-        ss = next((r for r in rows if r["Jahr"] == jahr and r["SemesterTyp"] == "SS"), None)
-        ws = next((r for r in rows if r["Jahr"] == jahr and r["SemesterTyp"] == "WS"), None)
+        ss = next(
+            (r for r in rows if r["Jahr"] == jahr and r["SemesterTyp"] == "SS"), None
+        )
+        ws = next(
+            (r for r in rows if r["Jahr"] == jahr and r["SemesterTyp"] == "WS"), None
+        )
 
         zeitreihe_ss.append(int(ss["Gesamtstudierende_SG"]) if ss else 0)
         zeitreihe_ws.append(int(ws["Gesamtstudierende_SG"]) if ws else 0)
@@ -365,7 +374,9 @@ def get_stammdaten(produktkuerzel: str) -> dict:
 
     sql_alter, p_alter = pk_expand_sql(queries.SQL_STAMMDATEN_ALTER, produktkuerzel)
     sql_detail, p_detail = pk_expand_sql(queries.SQL_STAMMDATEN_DETAIL, produktkuerzel)
-    sql_beruf_a, p_beruf_a = pk_expand_sql(queries.SQL_STAMMDATEN_BERUFSAUSBILDUNG, produktkuerzel)
+    sql_beruf_a, p_beruf_a = pk_expand_sql(
+        queries.SQL_STAMMDATEN_BERUFSAUSBILDUNG, produktkuerzel
+    )
     alter_rows, detail_rows, beruf_rows = query_db_multi(
         [
             (sql_alter, p_alter),
@@ -386,7 +397,10 @@ def get_stammdaten(produktkuerzel: str) -> dict:
                 {"ja": 0, "nein": 0},
             )
         t = int(r["Total"] or 1)
-        geschlecht = {"weiblich": pct(r["Weiblich"], t), "maennlich": pct(r["Maennlich"], t)}
+        geschlecht = {
+            "weiblich": pct(r["Weiblich"], t),
+            "maennlich": pct(r["Maennlich"], t),
+        }
         inl = int(r.get("Inlaendisch", 0) or 0)
         ausl = int(r.get("Auslaendisch", 0) or 0)
         unbek = int(r.get("Unbekannt", 0) or 0)
@@ -443,7 +457,9 @@ def get_stammdaten(produktkuerzel: str) -> dict:
     ]
     alter_rows_filtered = _semester_filter_7(alter_overall)
     alter_semester = [_fmt_sem(r["Semesterkuerzel"]) for r in alter_rows_filtered]
-    alter_werte = [round(float(r["DurchschnittsAlter"]), 1) for r in alter_rows_filtered]
+    alter_werte = [
+        round(float(r["DurchschnittsAlter"]), 1) for r in alter_rows_filtered
+    ]
 
     # Detail: sum across HSZ per Zeitraum
     aktuell = sum_detail_rows([r for r in detail_rows if r["Zeitraum"] == "aktuell"])
@@ -478,11 +494,17 @@ def get_stammdaten(produktkuerzel: str) -> dict:
         h_alter_filtered = _semester_filter_7(h_alter)
         h_alter_semester = [_fmt_sem(r["Semesterkuerzel"]) for r in h_alter_filtered]
         h_alter_werte = [
-            round(float(r["DurchschnittsAlter"]), 1) if r["DurchschnittsAlter"] else None
+            round(float(r["DurchschnittsAlter"]), 1)
+            if r["DurchschnittsAlter"]
+            else None
             for r in h_alter_filtered
         ]
         h_aktuell = sum_detail_rows(
-            [r for r in detail_rows if r["Zeitraum"] == "aktuell" and r.get("HSZ") == hsz]
+            [
+                r
+                for r in detail_rows
+                if r["Zeitraum"] == "aktuell" and r.get("HSZ") == hsz
+            ]
         )
         h_rest = sum_detail_rows(
             [r for r in detail_rows if r["Zeitraum"] == "rest" and r.get("HSZ") == hsz]
@@ -532,10 +554,12 @@ def get_stammdaten(produktkuerzel: str) -> dict:
         "alter_zeitreihe_semester": alter_semester,
         "alter_zeitreihe": alter_werte,
         "top_berufsausbildungen_aktuell": [
-            {"name": ba, "pct": round(cnt / total_akt * 100, 1)} for ba, cnt in beruf_akt[:5]
+            {"name": ba, "pct": round(cnt / total_akt * 100, 1)}
+            for ba, cnt in beruf_akt[:5]
         ],
         "top_berufsausbildungen_rest": [
-            {"name": ba, "pct": round(cnt / total_rest * 100, 1)} for ba, cnt in beruf_rest[:5]
+            {"name": ba, "pct": round(cnt / total_rest * 100, 1)}
+            for ba, cnt in beruf_rest[:5]
         ],
         "geschlecht_aktuell": g_akt,
         "geschlecht_rest": g_rest,
@@ -617,14 +641,19 @@ def get_studienerfolg(produktkuerzel: str) -> dict:
             pivot[fs][cluster][rsz] = pivot[fs][cluster].get(rsz, 0) + int(r["Anzahl"])
 
         kohortengroesse = (
-            sum(sum(sum(rv.values()) for rv in cv.values()) for cv in pivot.values()) or 1
+            sum(sum(sum(rv.values()) for rv in cv.values()) for cv in pivot.values())
+            or 1
         )
 
         def cluster_total(name, rsz_filter=None):
             t = 0
             for lbl in labels_num:
                 cd = pivot.get(lbl, {}).get(name, {})
-                t += cd.get(rsz_filter, 0) if rsz_filter is not None else sum(cd.values())
+                t += (
+                    cd.get(rsz_filter, 0)
+                    if rsz_filter is not None
+                    else sum(cd.values())
+                )
             return t
 
         result = []
@@ -634,8 +663,12 @@ def get_studienerfolg(produktkuerzel: str) -> dict:
 
         result.append(round(cluster_total("Abbrecher") / kohortengroesse * 100, 1))
         result.append(round(cluster_total("Wechsler") / kohortengroesse * 100, 1))
-        result.append(round(cluster_total("Eingeschrieben", 0) / kohortengroesse * 100, 1))
-        result.append(round(cluster_total("Eingeschrieben", 1) / kohortengroesse * 100, 1))
+        result.append(
+            round(cluster_total("Eingeschrieben", 0) / kohortengroesse * 100, 1)
+        )
+        result.append(
+            round(cluster_total("Eingeschrieben", 1) / kohortengroesse * 100, 1)
+        )
         result.append(round(cluster_total("Absolvent") / kohortengroesse * 100, 1))
         return result
 
@@ -676,7 +709,9 @@ def get_studienerfolg(produktkuerzel: str) -> dict:
     def sort_key(x):
         return 99 if x == "9+" else int(x)
 
-    all_sv = sorted(set(list(vl_sg_pivot.keys()) + list(vl_fom_pivot.keys())), key=sort_key)
+    all_sv = sorted(
+        set(list(vl_sg_pivot.keys()) + list(vl_fom_pivot.keys())), key=sort_key
+    )
     vl_labels = [
         "Regelstudienzeit" if sv == "0" else (f"{sv} VS" if sv == "9+" else f"{sv}. VS")
         for sv in all_sv
@@ -685,7 +720,8 @@ def get_studienerfolg(produktkuerzel: str) -> dict:
     vl_sg_vals = [vl_sg_pivot.get(sv, 0) for sv in all_sv]
     vl_fom_vals = [vl_fom_pivot.get(sv, 0) for sv in all_sv]
     vl_pct = [
-        round(vl_sg_pivot.get(sv, 0) / max(vl_fom_pivot.get(sv, 0), 1) * 100, 1) for sv in all_sv
+        round(vl_sg_pivot.get(sv, 0) / max(vl_fom_pivot.get(sv, 0), 1) * 100, 1)
+        for sv in all_sv
     ]
 
     # Per-HSZ
@@ -746,7 +782,12 @@ def _dedup_uebergang(rows: list[dict]) -> list[dict]:
     seen: set = set()
     result = []
     for r in rows:
-        key = (r.get("PersonenFID"), r.get("M_PK"), r.get("M_HSZ_K"), r.get("M_Kohorte"))
+        key = (
+            r.get("PersonenFID"),
+            r.get("M_PK"),
+            r.get("M_HSZ_K"),
+            r.get("M_Kohorte"),
+        )
         if key in seen:
             continue
         seen.add(key)
@@ -754,7 +795,9 @@ def _dedup_uebergang(rows: list[dict]) -> list[dict]:
     return result
 
 
-def _compute_uebergang_stats(rows: list[dict], kohorten_set: list[str]) -> tuple[dict, dict, dict]:
+def _compute_uebergang_stats(
+    rows: list[dict], kohorten_set: list[str]
+) -> tuple[dict, dict, dict]:
     """Berechnet Uebergangs-Statistiken pro Kohorte."""
     herkunft: dict = {}
     master_total_per_kohorte: dict = {}
@@ -766,9 +809,15 @@ def _compute_uebergang_stats(rows: list[dict], kohorten_set: list[str]) -> tuple
         master_total_per_kohorte[kohorte] = total
 
         # Herkunft-Klassifizierung
-        kein_ba = sum(1 for r in kohorte_rows if _classify_uebergang(r) == "kein_bachelor")
-        gleich = sum(1 for r in kohorte_rows if _classify_uebergang(r) == "gleiche_fachrichtung")
-        andere = sum(1 for r in kohorte_rows if _classify_uebergang(r) == "andere_fachrichtung")
+        kein_ba = sum(
+            1 for r in kohorte_rows if _classify_uebergang(r) == "kein_bachelor"
+        )
+        gleich = sum(
+            1 for r in kohorte_rows if _classify_uebergang(r) == "gleiche_fachrichtung"
+        )
+        andere = sum(
+            1 for r in kohorte_rows if _classify_uebergang(r) == "andere_fachrichtung"
+        )
 
         herkunft[kohorte] = {
             "kein_bachelor": kein_ba,
@@ -850,7 +899,8 @@ def get_uebergang(produktkuerzel: str) -> dict:
     total_mit_ba = sum(cnt for cnt in all_sg_counts.values()) or 1
     top_sg = sorted(all_sg_counts.items(), key=lambda x: -x[1])[:10]
     top_studiengaenge = [
-        {"name": sg, "anzahl": cnt, "pct": round(cnt / total_mit_ba * 100, 1)} for sg, cnt in top_sg
+        {"name": sg, "anzahl": cnt, "pct": round(cnt / total_mit_ba * 100, 1)}
+        for sg, cnt in top_sg
     ]
 
     # Herkunft pro Kohorte als Listen
@@ -939,9 +989,13 @@ def get_herkunft(produktkuerzel: str) -> dict:
 
             studienrichtungen[b_familie] = studienrichtungen.get(b_familie, 0) + 1
             if same_hsz:
-                studienrichtungen_gleich[b_familie] = studienrichtungen_gleich.get(b_familie, 0) + 1
+                studienrichtungen_gleich[b_familie] = (
+                    studienrichtungen_gleich.get(b_familie, 0) + 1
+                )
             else:
-                studienrichtungen_anders[b_familie] = studienrichtungen_anders.get(b_familie, 0) + 1
+                studienrichtungen_anders[b_familie] = (
+                    studienrichtungen_anders.get(b_familie, 0) + 1
+                )
 
             cat = classify(r)
             uebersicht[cat] = uebersicht.get(cat, 0) + 1
@@ -950,16 +1004,20 @@ def get_herkunft(produktkuerzel: str) -> dict:
             return sorted(d.items(), key=lambda x: -x[1])[:10]
 
         bachelor_studiengaenge = [
-            {"name": sg, "pct": round(cnt / total * 100, 1)} for sg, cnt in top10(sg_counts)
+            {"name": sg, "pct": round(cnt / total * 100, 1)}
+            for sg, cnt in top10(sg_counts)
         ]
         bachelor_studiengaenge_gleich = [
-            {"name": sg, "pct": round(cnt / total * 100, 1)} for sg, cnt in top10(sg_gleich)
+            {"name": sg, "pct": round(cnt / total * 100, 1)}
+            for sg, cnt in top10(sg_gleich)
         ]
         bachelor_studiengaenge_anders = [
-            {"name": sg, "pct": round(cnt / total * 100, 1)} for sg, cnt in top10(sg_anders)
+            {"name": sg, "pct": round(cnt / total * 100, 1)}
+            for sg, cnt in top10(sg_anders)
         ]
         top_studienrichtungen = [
-            {"name": sr, "pct": round(cnt / total * 100, 1)} for sr, cnt in top10(studienrichtungen)
+            {"name": sr, "pct": round(cnt / total * 100, 1)}
+            for sr, cnt in top10(studienrichtungen)
         ]
         top_studienrichtungen_gleich = [
             {"name": sr, "pct": round(cnt / total * 100, 1)}
@@ -982,7 +1040,9 @@ def get_herkunft(produktkuerzel: str) -> dict:
             "an_anderem_vorher",
             "an_anderem_nachher",
         ]
-        uebersicht_vals = [round(uebersicht.get(k, 0) / total * 100, 1) for k in uebersicht_keys]
+        uebersicht_vals = [
+            round(uebersicht.get(k, 0) / total * 100, 1) for k in uebersicht_keys
+        ]
 
         return {
             "bachelor_studiengaenge": bachelor_studiengaenge,
@@ -1108,7 +1168,9 @@ def get_vertiefungsrichtungen(produktkuerzel: str) -> dict | None:
         return None
 
     cur_sem = _aktuelles_semester()
-    all_semesters = sorted(set(r["Semesterkuerzel"] for r in rows if r["Semesterkuerzel"]))
+    all_semesters = sorted(
+        set(r["Semesterkuerzel"] for r in rows if r["Semesterkuerzel"])
+    )
     all_semesters = [s for s in all_semesters if s <= cur_sem][-7:]
     rows = [r for r in rows if r["Semesterkuerzel"] in set(all_semesters)]
 
@@ -1116,7 +1178,10 @@ def get_vertiefungsrichtungen(produktkuerzel: str) -> dict | None:
 
     def build_table(filtered_rows, semesters):
         names = sorted(
-            set(r.get("Vertiefungsname") or r.get("Modulname") or "?" for r in filtered_rows)
+            set(
+                r.get("Vertiefungsname") or r.get("Modulname") or "?"
+                for r in filtered_rows
+            )
         )
         items = []
         gesamt_per_sem = [0] * len(semesters)
@@ -1154,7 +1219,9 @@ def get_vertiefungsrichtungen(produktkuerzel: str) -> dict | None:
 
     # Hochschulzertifikate
     try:
-        sql_hz, p_hz = pk_expand_sql(queries.SQL_HOCHSCHULZERTIFIKATE, produktkuerzel, count=1)
+        sql_hz, p_hz = pk_expand_sql(
+            queries.SQL_HOCHSCHULZERTIFIKATE, produktkuerzel, count=1
+        )
         hz_rows = query_db(sql_hz, p_hz)
         if hz_rows:
             hz_blocks = sorted(set(r["Block"] for r in hz_rows if r["Block"]))
@@ -1209,7 +1276,8 @@ def get_rahmendaten(produktkuerzel: str) -> dict:
     im_angebot_seit = None
     if rahmen_rows:
         erste = min(
-            (r["ErstesAngebot"] for r in rahmen_rows if r.get("ErstesAngebot")), default=None
+            (r["ErstesAngebot"] for r in rahmen_rows if r.get("ErstesAngebot")),
+            default=None,
         )
         if erste:
             im_angebot_seit = str(erste)[:10]
@@ -1221,7 +1289,9 @@ def get_rahmendaten(produktkuerzel: str) -> dict:
         variants = expand_pk(produktkuerzel)
         ph_buchungen = ",".join("?" * len(variants))
         sql_parts = queries.SQL_UES.split("= ?")
-        sql_ues_final = sql_parts[0] + "= ?" + sql_parts[1] + f"IN ({ph_buchungen})" + sql_parts[2]
+        sql_ues_final = (
+            sql_parts[0] + "= ?" + sql_parts[1] + f"IN ({ph_buchungen})" + sql_parts[2]
+        )
         p_ues = [produktkuerzel] + variants
         ue_rows = query_db(sql_ues_final, p_ues)
 
@@ -1240,9 +1310,9 @@ def get_rahmendaten(produktkuerzel: str) -> dict:
         if modules_without_sem:
             ph_mods = ",".join("?" * len(modules_without_sem))
             ph_pks = ",".join("?" * len(variants))
-            sql_vp = queries.SQL_VP_ALIASES_SEMESTER.replace("{pk_placeholders}", ph_pks).replace(
-                "{mod_placeholders}", ph_mods
-            )
+            sql_vp = queries.SQL_VP_ALIASES_SEMESTER.replace(
+                "{pk_placeholders}", ph_pks
+            ).replace("{mod_placeholders}", ph_mods)
             vp_rows = query_db(sql_vp, variants + list(modules_without_sem))
             for r in vp_rows:
                 vp_aliases_mapping[int(r["ModulFID"])] = int(r["Fachsemester"])
@@ -1316,7 +1386,10 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
         DB-Connection arbeiten. Die komplexe Logik mit #gs_anr, #anr_data,
         #antrag_qual wird in einem einzigen Connection-Kontext ausgefuehrt.
     """
-    from studiengang_steckbriefe.services.db_connector import get_connection, release_connection
+    from studiengang_steckbriefe.services.db_connector import (
+        get_connection,
+        release_connection,
+    )
 
     cache_key = f"anrechnungen_{produktkuerzel}"
     cached = cache_get(cache_key)
@@ -1385,7 +1458,9 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
             FROM #gs_anr g
             LEFT JOIN #anr_data d ON d.StudienEintragID = g.StudienEintragID
         """)
-        s = dict(zip([c[0] for c in cursor.description], cursor.fetchone(), strict=False))
+        s = dict(
+            zip([c[0] for c in cursor.description], cursor.fetchone(), strict=False)
+        )
         total = max(int(s.get("Total", 0)), 1)
         mit_anrechnung = int(s.get("MitAnrechnung", 0))
         anteil_pct = round(mit_anrechnung / total * 100, 1)
@@ -1414,7 +1489,9 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
 
         # Aufraeumen
         try:
-            cursor.execute("DROP TABLE IF EXISTS #gs_anr; DROP TABLE IF EXISTS #anr_data")
+            cursor.execute(
+                "DROP TABLE IF EXISTS #gs_anr; DROP TABLE IF EXISTS #anr_data"
+            )
         except Exception:
             pass
 
@@ -1432,7 +1509,9 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
         "mit_anrechnung": mit_anrechnung,
         "anteil_pct": anteil_pct,
         "offene_hochschule_pct": offene_hs_pct,
-        "top_module": [{"name": m["Name"], "anzahl": int(m["Cnt"])} for m in top_module],
+        "top_module": [
+            {"name": m["Name"], "anzahl": int(m["Cnt"])} for m in top_module
+        ],
     }
     cache_set(cache_key, data)
     return data

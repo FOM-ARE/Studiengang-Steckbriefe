@@ -53,7 +53,10 @@ def add_user():
         "VALUES (%s, %s, %s, %s, %s)",
         (app_name, berechtigt, "read", typ, 1),
     )
-    result = {"ok": True, "user": {"berechtigt": berechtigt, "recht": "read", "typ": typ}}
+    result = {
+        "ok": True,
+        "user": {"berechtigt": berechtigt, "recht": "read", "typ": typ},
+    }
     return jsonify(result), 201
 
 

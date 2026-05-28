@@ -41,7 +41,9 @@ class EntraIdAuth:
             redirect_uri=self._redirect_uri,
         )
         if "error" in result:
-            raise ValueError(result.get("error_description", "Authentifizierung fehlgeschlagen"))
+            raise ValueError(
+                result.get("error_description", "Authentifizierung fehlgeschlagen")
+            )
         return result
 
 
@@ -88,7 +90,10 @@ def check_permission(username: str, required_role: str = "read") -> bool:
         role_level = role_hierarchy.get(role, 0)
         if role_level >= required_level:
             for entry in entries:
-                if entry["typ"] == "user" and entry["berechtigt"].lower() == username.lower():
+                if (
+                    entry["typ"] == "user"
+                    and entry["berechtigt"].lower() == username.lower()
+                ):
                     return True
                 # Gruppen-Pruefung koennte hier erweitert werden
     return False
@@ -103,7 +108,10 @@ def get_user_role(username: str) -> str | None:
 
     for role, entries in permissions.items():
         for entry in entries:
-            if entry["typ"] == "user" and entry["berechtigt"].lower() == username.lower():
+            if (
+                entry["typ"] == "user"
+                and entry["berechtigt"].lower() == username.lower()
+            ):
                 level = role_hierarchy.get(role, 0)
                 if level > max_level:
                     max_level = level

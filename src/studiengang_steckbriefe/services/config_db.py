@@ -55,7 +55,9 @@ def _build_pk_case_sql(alias: str = "l") -> str:
     for basis_pk, variants in PK_REVERSE.items():
         if len(variants) > 1:
             in_list = ",".join(f"'{v}'" for v in variants)
-            cases.append(f"WHEN {alias}.Produktkuerzel IN ({in_list}) THEN '{basis_pk}'")
+            cases.append(
+                f"WHEN {alias}.Produktkuerzel IN ({in_list}) THEN '{basis_pk}'"
+            )
     if not cases:
         return f"{alias}.Produktkuerzel"
     return "CASE " + " ".join(cases) + f" ELSE {alias}.Produktkuerzel END"
@@ -115,7 +117,9 @@ def reload_config():
         "WHERE IstAusgeschlossen = 1 AND IstAktiv = 1"
     )
     EXCLUDED_HSZ = [r["Name"] for r in rows]
-    EXCLUDED_HSZ_SQL = ",".join(f"'{h}'" for h in EXCLUDED_HSZ) if EXCLUDED_HSZ else "'__NONE__'"
+    EXCLUDED_HSZ_SQL = (
+        ",".join(f"'{h}'" for h in EXCLUDED_HSZ) if EXCLUDED_HSZ else "'__NONE__'"
+    )
 
     # 4) Anrechnung-Regeln
     rows = mariadb_connector.query(
@@ -154,7 +158,9 @@ def reload_config():
     )
     ENDPOINT_PARAMS = {}
     for r in rows:
-        ENDPOINT_PARAMS.setdefault(r["EndpunktCode"], {})[r["ParamName"]] = r["ParamWert"]
+        ENDPOINT_PARAMS.setdefault(r["EndpunktCode"], {})[r["ParamName"]] = r[
+            "ParamWert"
+        ]
 
     # 6) Filterliste
     rows = mariadb_connector.query(
@@ -167,7 +173,9 @@ def reload_config():
     # HSB-Exclude
     HSB_EXCLUDE_KUERZEL = FILTERLISTE.get("HSB_EXCLUDE", [])
     HSB_EXCLUDE_SQL = (
-        ",".join(f"'{k}'" for k in HSB_EXCLUDE_KUERZEL) if HSB_EXCLUDE_KUERZEL else "'__NONE__'"
+        ",".join(f"'{k}'" for k in HSB_EXCLUDE_KUERZEL)
+        if HSB_EXCLUDE_KUERZEL
+        else "'__NONE__'"
     )
 
     # 7) PK-CASE SQL-Fragmente

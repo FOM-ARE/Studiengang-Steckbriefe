@@ -2,7 +2,10 @@
 
 from flask import Blueprint, jsonify
 
-from studiengang_steckbriefe.services.db_connector import get_connection, release_connection
+from studiengang_steckbriefe.services.db_connector import (
+    get_connection,
+    release_connection,
+)
 
 health_bp = Blueprint("health", __name__)
 

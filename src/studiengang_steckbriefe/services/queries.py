@@ -45,7 +45,11 @@ _PK_CASE: str = ""
 
 def _build_sql_queries():
     """Baut alle SQL-Queries mit Werten aus der Konfigurations-DB."""
-    global SQL_STUDIERENDE_ZEITREIHE, SQL_STUDIERENDE_HSZ, SQL_STUDIERENDE_HSZ_AVG, SQL_AKTIVE_HSZEN
+    global \
+        SQL_STUDIERENDE_ZEITREIHE, \
+        SQL_STUDIERENDE_HSZ, \
+        SQL_STUDIERENDE_HSZ_AVG, \
+        SQL_AKTIVE_HSZEN
     global SQL_STUDIENGAENGE_LISTE, SQL_STUDIERENDE_AKTUELL
 
     _excl = config_db.EXCLUDED_HSZ_SQL
@@ -205,12 +209,20 @@ def _build_sql_queries():
     _hz_von = config_db.get_param("hochschulzertifikate", "datum_von", "2021-08-01")
     _jahre_zuz = config_db.get_param_int("zuzahler", "jahre_zurueck", 4)
     _sem_anr = config_db.get_param_int("anrechnungen", "semester_zurueck", 6)
-    _sg_trends = config_db.get_param("trends", "statusgruppe", "Gesamtstudierende mit UV")
+    _sg_trends = config_db.get_param(
+        "trends", "statusgruppe", "Gesamtstudierende mit UV"
+    )
     _sg_stamm_1 = config_db.get_param("stammdaten", "statusgruppe", "Beginner mit UV")
-    _sg_stamm_2 = config_db.get_param("stammdaten", "statusgruppe_2", "Quereinsteiger mit UV")
-    _sg_zuz = config_db.get_param("zuzahler", "statusgruppe", "Gesamtstudierende mit UV")
+    _sg_stamm_2 = config_db.get_param(
+        "stammdaten", "statusgruppe_2", "Quereinsteiger mit UV"
+    )
+    _sg_zuz = config_db.get_param(
+        "zuzahler", "statusgruppe", "Gesamtstudierende mit UV"
+    )
     _sg_anr_1 = config_db.get_param("anrechnungen", "statusgruppe_1", "Beginner mit UV")
-    _sg_anr_2 = config_db.get_param("anrechnungen", "statusgruppe_2", "Quereinsteiger mit UV")
+    _sg_anr_2 = config_db.get_param(
+        "anrechnungen", "statusgruppe_2", "Quereinsteiger mit UV"
+    )
     _offene_hs = config_db.OFFENE_HOCHSCHULE_SQL
     _ue_raumids = config_db.get_filter_sql("UE_RAUMID")
     _ue_veransttyp = config_db.get_filter_sql("UE_VERANSTTYP")
@@ -985,10 +997,16 @@ def _patch_remaining_queries():
     _ausrichtung_excl = config_db.get_filter_sql("AUSRICHTUNG_EXCLUDE")
     _offene_hs = config_db.OFFENE_HOCHSCHULE_SQL
     _sg_stamm_1 = config_db.get_param("stammdaten", "statusgruppe", "Beginner mit UV")
-    _sg_stamm_2 = config_db.get_param("stammdaten", "statusgruppe_2", "Quereinsteiger mit UV")
-    _sg_zuz = config_db.get_param("zuzahler", "statusgruppe", "Gesamtstudierende mit UV")
+    _sg_stamm_2 = config_db.get_param(
+        "stammdaten", "statusgruppe_2", "Quereinsteiger mit UV"
+    )
+    _sg_zuz = config_db.get_param(
+        "zuzahler", "statusgruppe", "Gesamtstudierende mit UV"
+    )
     _sg_anr_1 = config_db.get_param("anrechnungen", "statusgruppe_1", "Beginner mit UV")
-    _sg_anr_2 = config_db.get_param("anrechnungen", "statusgruppe_2", "Quereinsteiger mit UV")
+    _sg_anr_2 = config_db.get_param(
+        "anrechnungen", "statusgruppe_2", "Quereinsteiger mit UV"
+    )
     _jahre_stamm = str(config_db.get_param_int("stammdaten", "jahre_zurueck", 2))
     _kohorten_j = str(config_db.get_param_int("studienerfolg", "kohorten_jahre", 5))
     _uebergang_j = str(config_db.get_param_int("uebergang", "kohorten_jahre", 5))
@@ -1101,13 +1119,18 @@ def _patch_remaining_queries():
     zeit_replacements = [
         ("YEAR(GETDATE())-2", f"YEAR(GETDATE())-{_jahre_stamm}"),
         ("YEAR(GETDATE()) - 2", f"YEAR(GETDATE()) - {_jahre_stamm}"),
-        ("YEAR(DATEADD(YEAR, -5, GETDATE()))", f"YEAR(DATEADD(YEAR, -{_kohorten_j}, GETDATE()))"),
+        (
+            "YEAR(DATEADD(YEAR, -5, GETDATE()))",
+            f"YEAR(DATEADD(YEAR, -{_kohorten_j}, GETDATE()))",
+        ),
         ("YEAR(GETDATE()) - 4", f"YEAR(GETDATE()) - {_jahre_zuz}"),
     ]
 
     # Alle SQL-Variablen im Modul patchen
     sql_vars = [
-        name for name in dir(module) if name.startswith("SQL_") or name.startswith("_ZUZAHLER")
+        name
+        for name in dir(module)
+        if name.startswith("SQL_") or name.startswith("_ZUZAHLER")
     ]
     for var_name in sql_vars:
         val = getattr(module, var_name)

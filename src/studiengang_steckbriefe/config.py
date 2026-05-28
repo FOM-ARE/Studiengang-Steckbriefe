@@ -58,11 +58,15 @@ class DevelopmentConfig(Config):
     DEBUG = True
 
     # Pipeline liefert: AZURE_CLIENT_ID_DEV, AZURE_CLIENT_SECRET_DEV, AZURE_TENANT_ID_DEV
-    AZURE_CLIENT_ID = os.environ.get("AZURE_CLIENT_ID_DEV", os.environ.get("AZURE_CLIENT_ID", ""))
+    AZURE_CLIENT_ID = os.environ.get(
+        "AZURE_CLIENT_ID_DEV", os.environ.get("AZURE_CLIENT_ID", "")
+    )
     AZURE_CLIENT_SECRET = os.environ.get(
         "AZURE_CLIENT_SECRET_DEV", os.environ.get("AZURE_CLIENT_SECRET", "")
     )
-    AZURE_TENANT_ID = os.environ.get("AZURE_TENANT_ID_DEV", os.environ.get("AZURE_TENANT_ID", ""))
+    AZURE_TENANT_ID = os.environ.get(
+        "AZURE_TENANT_ID_DEV", os.environ.get("AZURE_TENANT_ID", "")
+    )
     ENTRA_CLIENT_ID = AZURE_CLIENT_ID
     ENTRA_CLIENT_SECRET = AZURE_CLIENT_SECRET
     ENTRA_AUTHORITY = _azure_authority(AZURE_TENANT_ID)
@@ -90,11 +94,15 @@ class ProductionConfig(Config):
     DEBUG = False
 
     # Pipeline liefert: AZURE_CLIENT_ID_PROD, AZURE_CLIENT_SECRET_PROD, AZURE_TENANT_ID_PROD
-    AZURE_CLIENT_ID = os.environ.get("AZURE_CLIENT_ID_PROD", os.environ.get("AZURE_CLIENT_ID", ""))
+    AZURE_CLIENT_ID = os.environ.get(
+        "AZURE_CLIENT_ID_PROD", os.environ.get("AZURE_CLIENT_ID", "")
+    )
     AZURE_CLIENT_SECRET = os.environ.get(
         "AZURE_CLIENT_SECRET_PROD", os.environ.get("AZURE_CLIENT_SECRET", "")
     )
-    AZURE_TENANT_ID = os.environ.get("AZURE_TENANT_ID_PROD", os.environ.get("AZURE_TENANT_ID", ""))
+    AZURE_TENANT_ID = os.environ.get(
+        "AZURE_TENANT_ID_PROD", os.environ.get("AZURE_TENANT_ID", "")
+    )
     ENTRA_CLIENT_ID = AZURE_CLIENT_ID
     ENTRA_CLIENT_SECRET = AZURE_CLIENT_SECRET
     ENTRA_AUTHORITY = _azure_authority(AZURE_TENANT_ID)
@@ -102,7 +110,10 @@ class ProductionConfig(Config):
     @classmethod
     def init_app(cls, app):
         """Validiert kritische Konfigurationswerte in Produktion."""
-        if not app.config.get("SECRET_KEY") or app.config["SECRET_KEY"] == "dev-secret-key":
+        if (
+            not app.config.get("SECRET_KEY")
+            or app.config["SECRET_KEY"] == "dev-secret-key"
+        ):
             raise RuntimeError("SECRET_KEY muss in Produktion gesetzt sein")
         if not app.config.get("AZURE_KEYVAULT_URL"):
             raise RuntimeError("AZURE_KEYVAULT_URL muss in Produktion gesetzt sein")
