@@ -125,9 +125,7 @@ def query_db_multi(queries: list[tuple]) -> list[list[dict]]:
             else:
                 cursor.execute(sql)
             columns = [col[0] for col in cursor.description]
-            results.append(
-                [dict(zip(columns, row, strict=False)) for row in cursor.fetchall()]
-            )
+            results.append([dict(zip(columns, row, strict=False)) for row in cursor.fetchall()])
         release_connection(conn)
         return results
     except Exception:

@@ -65,9 +65,7 @@ def callback():
 
     auth_code = request.args.get("code")
     if not auth_code:
-        error = request.args.get(
-            "error_description", "Kein Authorization Code erhalten"
-        )
+        error = request.args.get("error_description", "Kein Authorization Code erhalten")
         return jsonify({"error": error}), 400
 
     auth = EntraIdAuth(current_app)

@@ -41,9 +41,7 @@ def load_keyvault_secrets(app):
 
     # DWH Connection String (optional – falls SQL Auth statt Windows Auth)
     try:
-        app.config["DWH_CONNECTION_STRING"] = client.get_secret(
-            "dwh-connection-string"
-        ).value
+        app.config["DWH_CONNECTION_STRING"] = client.get_secret("dwh-connection-string").value
     except Exception:
         pass  # Windows Auth benoetigt kein gespeichertes Secret
 
