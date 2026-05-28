@@ -1,0 +1,99 @@
+def expand_pk(produktkuerzel):
+    """Gibt Liste aller Produktkürzel-Varianten für ein Basis-PK zurück."""
+    return _PK_REVERSE.get(produktkuerzel, [produktkuerzel])
+
+
+def pk_in_clause(produktkuerzel):
+    """Gibt (sql_fragment, params) für IN-Clause zurück.
+    Beispiel: ('IN (?,?,?)', ['BBA','BBAb','BBAd'])
+    """
+    variants = expand_pk(produktkuerzel)
+    placeholders = ','.join('?' * len(variants))
+    return f'IN ({placeholders})', variants
+
+
+def pk_expand_sql(sql, produktkuerzel, count=None):
+    """Ersetzt alle '= ?' Produktkuerzel-Filter durch 'IN (?,?,...)'.
+    Gibt (neues_sql, params_liste) zurück.
+    count: Anzahl der '= ?'-Stellen die ersetzt werden sollen (None = alle).
+    """
+    variants = expand_pk(produktkuerzel)
+    placeholders = ','.join('?' * len(variants))
+    in_clause = f'IN ({placeholders})'
+    new_sql = sql
+    params = []
+    replaced = 0
+    while '= ?' in new_sql:
+        if count is not None and replaced >= count:
+            break
+        new_sql = new_sql.replace('= ?', in_clause, 1)
+        params.extend(variants)
+        replaced += 1
+    return new_sql, params
+
+
+def query_db(sql, params=None):
+    """Führt eine SQL-Abfrage aus und gibt eine Liste von Dicts zurück."""
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        if params:
+            cursor.execute(sql, params)
+        else:
+            cursor.execute(sql)
+        columns = [col[0] for col in cursor.description]
+        rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        return rows
+    except Exception:
+        try: conn.close()
+        except Exception: pass
+        raise
+    else:
+        release_connection(conn)
+
+
+def query_db_multi(queries):
+    """Führt mehrere Queries auf EINER Connection aus. queries = [(sql, params), ...]"""
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        results = []
+        for sql, params in queries:
+            if params:
+                cursor.execute(sql, params)
+            else:
+                cursor.execute(sql)
+            columns = [col[0] for col in cursor.description]
+            results.append([dict(zip(columns, row)) for row in cursor.fetchall()])
+        return results
+    except Exception:
+        try: conn.close()
+        except Exception: pass
+        raise
+    else:
+        release_connection(conn)
+
+
+# ---------------------------------------
+# Semester-Filter: aktuelles Semester + letzte 6 = 7
+# ---------------------------------------
+from datetime import date as _date
+
+def _aktuelles_semester():
+    """Gibt das aktuelle Semesterkuerzel im DB-Format zurück (z.B. '2026-SS')."""
+    today = _date.today()
+    return f"{today.year}-SS" if 3 <= today.month <= 8 else f"{today.year}-WS"
+
+def _semester_filter_7(rows, key='Semesterkuerzel'):
+    """Filtert Zeilen auf aktuelles Semester + letzte 6 (max 7 Semester, aufsteigend sortiert)."""
+    cur = _aktuelles_semester()
+    filtered = [r for r in rows if r[key] <= cur]
+    # Letzte 7 einzigartige Semester ermitteln und alle zugehörigen Zeilen behalten
+    unique_sems = sorted(set(r[key] for r in filtered))[-7:]
+    sem_set = set(unique_sems)
+    return [r for r in filtered if r[key] in sem_set]
+
+
+# ---------------------------------------
+# SQL QUERIES (dynamisch aus config_db generiert)
+# ---------------------------------------
