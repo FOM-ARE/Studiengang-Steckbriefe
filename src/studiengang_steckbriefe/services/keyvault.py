@@ -35,10 +35,10 @@ def load_keyvault_secrets(app):
 
     # Flask Secret Key (optional – Fallback: FLASK_SECRET_KEY-Umgebungsvariable)
     try:
-        app.config["SECRET_KEY"] = client.get_secret("flask-secret-key").value
+        app.config["SECRET_KEY"] = client.get_secret("flasksecretkey").value
     except Exception:
         app.logger.warning(
-            "Secret 'flask-secret-key' nicht im Key Vault gefunden "
+            "Secret 'flasksecretkey' nicht im Key Vault gefunden "
             "– nutze FLASK_SECRET_KEY-Umgebungsvariable"
         )
 
