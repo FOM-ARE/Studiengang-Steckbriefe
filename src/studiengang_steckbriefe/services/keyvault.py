@@ -8,8 +8,8 @@ def load_keyvault_secrets(app):
     """Laedt Secrets aus Azure Key Vault und setzt sie in app.config.
 
     Wird in der App Factory aufgerufen (ausser im Testing-Modus).
-    Nutzt DefaultAzureCredential (Managed Identity, Env-Vars, CLI)
-    oder expliziten Service Principal falls konfiguriert.
+    Nutzt DefaultAzureCredential (Managed Identity) oder expliziten
+    Service Principal falls alle Credentials vollstaendig konfiguriert sind.
     """
     vault_url = app.config.get("AZURE_KEYVAULT_URL")
     if not vault_url:
@@ -28,8 +28,9 @@ def load_keyvault_secrets(app):
         )
         app.logger.info("Key Vault: nutze Service Principal Credentials")
     else:
-        credential = DefaultAzureCredential()
-        app.logger.info("Key Vault: nutze DefaultAzureCredential (Managed Identity / CLI)")
+        # exclude_environment_credential=True verhindert Fehler bei leeren Env-Vars
+        credential = DefaultAzureCredential(exclude_environment_credential=True)
+        app.logger.info("Key Vault: nutze DefaultAzureCredential (Managed Identity)")
 
     client = SecretClient(vault_url=vault_url, credential=credential)
 
