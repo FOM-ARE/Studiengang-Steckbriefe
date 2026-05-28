@@ -29,19 +29,20 @@ def create_app(config_name: str | None = None) -> Flask:
         hours=app.config.get("PERMANENT_SESSION_LIFETIME_HOURS", 8)
     )
 
-    # Production-Validierung
-    config_cls = config[config_name]
-    if hasattr(config_cls, "init_app"):
-        config_cls.init_app(app)
-
     # CORS
     CORS(app, supports_credentials=True, origins=app.config["CORS_ORIGINS"])
 
     # Key Vault Secrets laden (nicht im Testing-Modus)
+    # WICHTIG: muss vor init_app() erfolgen, da init_app() SECRET_KEY validiert
     if config_name != "testing":
         from studiengang_steckbriefe.services.keyvault import load_keyvault_secrets
 
         load_keyvault_secrets(app)
+
+    # Production-Validierung (nach Key Vault, da SECRET_KEY dort gesetzt wird)
+    config_cls = config[config_name]
+    if hasattr(config_cls, "init_app"):
+        config_cls.init_app(app)
 
     # Datenbank-Pool initialisieren
     if config_name != "testing":
