@@ -12,9 +12,6 @@ resources:
     type: git
     name: DevOps/BCWYamlTemplate
 
-variables:
-- group: studiengangsteckbriefe-development
-
 extends:
   template: release/Mirantis.yml@BCWYamlTemplate
   parameters:
