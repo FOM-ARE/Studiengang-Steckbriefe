@@ -1,4 +1,4 @@
-﻿"""Azure Key Vault Integration - laedt Secrets zur Laufzeit."""
+"""Azure Key Vault Integration - laedt Secrets zur Laufzeit."""
 
 from azure.identity import ClientSecretCredential, DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
