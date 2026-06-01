@@ -1,6 +1,9 @@
 trigger: none
 pr: none
 
+variables:
+ - group: sgsteckbriefeKeyVaults
+
 resources:
   pipelines:
   - pipeline: BuildPipeline
@@ -11,8 +14,17 @@ resources:
   - repository: BCWYamlTemplate
     type: git
     name: DevOps/BCWYamlTemplate
-
+    
 extends:
   template: release/Mirantis.yml@BCWYamlTemplate
   parameters:
     targetPort: 8080
+    AZURE_CLIENT_ID_DEV: $(AZURE_CLIENT_ID_DEV)
+    AZURE_CLIENT_SECRET_DEV: $(AZURE_CLIENT_SECRET_DEV)
+    AZURE_TENANT_ID_DEV: $(AZURE_TENANT_ID)
+    AZURE_CLIENT_ID_STAGING: $(AZURE_CLIENT_ID_STG)
+    AZURE_CLIENT_SECRET_STAGING: $(AZURE_CLIENT_SECRET_STG)
+    AZURE_TENANT_ID_STAGING: $(AZURE_TENANT_ID)
+    AZURE_CLIENT_ID_PROD: $(AZURE_CLIENT_ID_PRD)
+    AZURE_CLIENT_SECRET_PROD: $(AZURE_CLIENT_SECRET_PRD)
+    AZURE_TENANT_ID_PROD: $(AZURE_TENANT_ID)
