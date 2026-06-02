@@ -3,7 +3,7 @@
 import secrets
 from functools import wraps
 
-from flask import Blueprint, current_app, jsonify, redirect, request, session
+from flask import Blueprint, current_app, jsonify, redirect, request, session, url_for
 
 from studiengang_steckbriefe.services.auth import (
     EntraIdAuth,
@@ -52,7 +52,7 @@ def login():
         return redirect(auth_url)
     except Exception as exc:
         current_app.logger.error("Entra ID Login fehlgeschlagen: %s", exc)
-        return jsonify({"error": "Authentifizierung nicht verfuegbar"}), 500
+        return redirect(url_for("main.login_page", error="auth_failed"))
 
 
 @auth_bp.route("/api/auth/callback")
@@ -61,18 +61,17 @@ def callback():
     # State validieren (CSRF-Schutz)
     state = request.args.get("state", "")
     if state != session.pop("auth_state", None):
-        return jsonify({"error": "Ungültiger State-Parameter"}), 400
+        return redirect(url_for("main.login_page", error="invalid_state"))
 
     auth_code = request.args.get("code")
     if not auth_code:
-        error = request.args.get("error_description", "Kein Authorization Code erhalten")
-        return jsonify({"error": error}), 400
+        return redirect(url_for("main.login_page", error="auth_failed"))
 
     auth = EntraIdAuth(current_app)
     try:
         result = auth.acquire_token(auth_code)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 401
+    except ValueError:
+        return redirect(url_for("main.login_page", error="auth_failed"))
 
     # User-Info aus Token-Claims extrahieren
     claims = result.get("id_token_claims", {})
@@ -82,20 +81,18 @@ def callback():
     # Berechtigung pruefen
     role = get_user_role(username)
     if not role:
-        return jsonify({"error": "Keine Berechtigung fuer diese Anwendung"}), 403
+        return redirect(url_for("main.login_page", error="no_permission"))
 
     # Session setzen
     session.permanent = True
     session["user"] = {
         "username": username,
-        "display_name": display_name,
+        "displayName": display_name,
         "email": claims.get("preferred_username", ""),
         "role": role,
     }
 
-    # Redirect zum Frontend
-    frontend_url = request.args.get("redirect", "/")
-    return redirect(frontend_url)
+    return redirect(url_for("main.index"))
 
 
 @auth_bp.route("/api/auth/logout", methods=["POST"])

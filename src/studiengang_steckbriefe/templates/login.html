@@ -3,138 +3,294 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FOM - Anmeldung</title>
+    <title>Studiengang-Steckbriefe – Anmeldung</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* ============================================================
+           FOM Design System – Login-Seite
+           Primärfarbe: #00998a | Quelle: S:\Asgard-HO\Design
+           ============================================================ */
         :root {
-            --fom-primary: #00998a;
-            --fom-primary-dark: #007a6e;
+            --fom-primary:       #00998a;
+            --fom-primary-dark:  #007a6e;
             --fom-primary-light: #33b3a6;
-            --fom-gray-200: #d1d7dc;
+            --fom-primary-pale:  #ccebe8;
+            --fom-bg:            #f4f6f8;
+            --fom-text:          #333333;
+            --ms-blue:           #0078d4;
+            --ms-blue-hover:     #106ebe;
+            --shadow-card:       0 8px 32px rgba(0, 153, 138, 0.18), 0 2px 8px rgba(0,0,0,0.08);
         }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
-            background: linear-gradient(135deg, var(--fom-primary-light) 0%, var(--fom-primary) 50%, var(--fom-primary-dark) 100%);
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--fom-bg);
+            background-image:
+                radial-gradient(ellipse at 20% 20%, rgba(0,153,138,0.12) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 80%, rgba(0,122,110,0.10) 0%, transparent 60%);
+            color: var(--fom-text);
+        }
+
+        /* ── Card ── */
+        .login-card {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: var(--shadow-card);
+            width: 420px;
+            max-width: 92vw;
+            overflow: hidden;
+        }
+
+        /* ── Card-Header (FOM-farbig) ── */
+        .card-header {
+            background: linear-gradient(135deg, #33b3a6 0%, #00998a 45%, #007a6e 100%);
+            padding: 36px 36px 30px;
+            text-align: center;
+        }
+
+        .logo-wrapper {
+            width: 80px;
+            height: 80px;
+            border-radius: 18px;
+            overflow: hidden;
+            margin: 0 auto 20px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.22);
+            flex-shrink: 0;
+        }
+
+        .logo-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .card-header h1 {
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            line-height: 1.3;
+        }
+
+        .card-header p {
+            color: rgba(255,255,255,0.85);
+            font-size: 13px;
+            margin-top: 6px;
+        }
+
+        /* ── Card-Body ── */
+        .card-body {
+            padding: 36px 36px 32px;
+            text-align: center;
+        }
+
+        .card-body h2 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--fom-text);
+            margin-bottom: 6px;
+        }
+
+        .card-body .subtitle {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 28px;
+            line-height: 1.5;
+        }
+
+        /* ── Microsoft Sign-In Button (offizielle MS-Branding-Guidelines – Outline-Stil) ── */
+        .ms-signin-btn {
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-        .login-box {
-            background: white;
-            border-radius: 12px;
-            padding: 40px 36px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-            width: 360px;
-            max-width: 90vw;
-            text-align: center;
-        }
-        .login-box img {
-            height: 50px;
-            margin-bottom: 16px;
-            background: var(--fom-primary);
-            padding: 8px 14px;
-            border-radius: 6px;
-        }
-        .login-box h2 {
-            color: var(--fom-primary-dark);
-            margin-bottom: 24px;
-            font-size: 20px;
-        }
-        .login-box input {
+            gap: 12px;
             width: 100%;
-            padding: 10px 14px;
-            margin-bottom: 14px;
-            border: 1px solid var(--fom-gray-200);
-            border-radius: 6px;
-            font-size: 14px;
-        }
-        .login-box input:focus {
-            outline: none;
-            border-color: var(--fom-primary);
-        }
-        .login-box button {
-            width: 100%;
-            padding: 11px;
-            background: var(--fom-primary);
-            color: white;
-            border: none;
-            border-radius: 6px;
+            padding: 11px 20px;
+            background: #ffffff;
+            color: #1a1a1a;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            font-family: inherit;
             font-size: 15px;
-            font-weight: 600;
+            font-weight: 400;
             cursor: pointer;
-            margin-top: 4px;
+            text-decoration: none;
+            transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+            letter-spacing: 0.01em;
         }
-        .login-box button:hover { background: var(--fom-primary-dark); }
-        .login-box button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .ms-signin-btn:hover {
+            background: #f5f5f5;
+            border-color: #b0b0b0;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+        }
+
+        .ms-signin-btn:active {
+            background: #ebebeb;
+        }
+
+        .ms-signin-btn svg {
+            flex-shrink: 0;
+        }
+
+        /* ── Trust-Indikator ── */
+        .trust-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            margin-top: 22px;
+            padding: 12px 14px;
+            background: var(--fom-primary-pale);
+            border-radius: 8px;
+            font-size: 12px;
+            color: var(--fom-primary-dark);
+            line-height: 1.4;
+        }
+
+        .trust-info svg {
+            flex-shrink: 0;
+        }
+
+        /* ── Fehlermeldung ── */
         .login-error {
-            color: #c0392b;
+            margin-top: 16px;
             font-size: 13px;
-            margin-top: 10px;
+            color: #c0392b;
             min-height: 18px;
         }
+
+        /* ── Card-Footer ── */
+        .card-footer {
+            border-top: 1px solid #eef0f2;
+            padding: 14px 36px;
+            text-align: center;
+            font-size: 11.5px;
+            color: #999;
+        }
+
+        /* ── Page-Footer ── */
+        .page-footer {
+            margin-top: 24px;
+            font-size: 11px;
+            color: #aaa;
+            text-align: center;
+        }
+
+        /* ── Redirect-Spinner (wird per JS eingeblendet) ── */
+        .redirecting {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 18px;
+            font-size: 13px;
+            color: var(--fom-primary-dark);
+        }
+
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--fom-primary-pale);
+            border-top-color: var(--fom-primary);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <div class="login-box">
-        <img src="assets/images/FOM-Logo-negativ.png" alt="FOM">
-        <h2>Studiengang-Steckbriefe</h2>
-        <form id="loginForm" autocomplete="on">
-            <input type="text" id="loginUser" placeholder="Benutzername (Windows-Login)" autocomplete="username" required>
-            <input type="password" id="loginPass" placeholder="Passwort" autocomplete="current-password" required>
-            <button type="submit" id="loginBtn">Anmelden</button>
-        </form>
-        <div class="login-error" id="loginError"></div>
+
+    <div class="login-card" role="main">
+
+        <!-- Header mit FOM-Branding -->
+        <div class="card-header">
+            <div class="logo-wrapper">
+                <img src="/static/images/FOM-Logo.jpg" alt="FOM Hochschule" onerror="this.parentElement.style.display='none'">
+            </div>
+            <h1>Studiengang-Steckbriefe</h1>
+            <p>FOM Hochschule</p>
+        </div>
+
+        <!-- Anmeldebereich -->
+        <div class="card-body">
+            <h2>Willkommen</h2>
+            <p class="subtitle">
+                Melden Sie sich mit Ihrem FOM-Konto an, um fortzufahren.
+            </p>
+
+            <!-- Microsoft Sign-In Button (Microsoft Branding Guidelines) -->
+            <a href="/api/auth/login" class="ms-signin-btn" id="loginBtn" role="button">
+                <!-- Offizielles Windows-Logo-Icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 21 21" aria-hidden="true">
+                    <rect x="1"  y="1"  width="9" height="9" fill="#f25022"/>
+                    <rect x="11" y="1"  width="9" height="9" fill="#7fba00"/>
+                    <rect x="1"  y="11" width="9" height="9" fill="#00a4ef"/>
+                    <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+                </svg>
+                Weiter mit Microsoft
+            </a>
+
+            <!-- Weiterleitung-Feedback -->
+            <div class="redirecting" id="redirecting">
+                <div class="spinner"></div>
+                <span>Sie werden zu Microsoft weitergeleitet …</span>
+            </div>
+
+            <!-- Trust-Indikator -->
+            <div class="trust-info" role="note">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                <span>Ihre Anmeldung wird sicher über <strong>Microsoft Entra ID</strong> abgewickelt. FOM speichert keine Passwörter.</span>
+            </div>
+
+            <div class="login-error" id="loginError" role="alert"></div>
+        </div>
+
+        <!-- Footer -->
+        <div class="card-footer">
+            FOM Hochschule &nbsp;·&nbsp; Nur für autorisierte Mitarbeitende
+        </div>
     </div>
 
+    <p class="page-footer">Bei Problemen wenden Sie sich an das Hochschulreporting (<a href="mailto:hochschulreporting@bcw-gruppe.de?subject=Zugriffsproblem%20Studiengang-Steckbriefe&body=Hallo%2C%0A%0Aich%20habe%20ein%20Problem%20bei%20der%20Anmeldung%20an%20den%20Studiengang-Steckbriefen.%0A%0AMein%20Windows-Login%3A%20%0AZweck%3A%20(wof%C3%BCr%20wird%20der%20Report%20von%20Ihnen%20ben%C3%B6tigt%3F)%0A%0AMit%20freundlichen%20Gr%C3%BC%C3%9Fen" style="color:#aaa;">hochschulreporting@bcw-gruppe.de</a>).</p>
+
     <script>
-        const API_BASE = 'http://localhost:5000/api';
-
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const errEl = document.getElementById('loginError');
-            const btn = document.getElementById('loginBtn');
-            errEl.textContent = '';
-
-            const username = document.getElementById('loginUser').value.trim();
-            const password = document.getElementById('loginPass').value;
-
-            if (!username || !password) {
-                errEl.textContent = 'Bitte alle Felder ausfüllen.';
-                return;
-            }
-
-            btn.disabled = true;
-            btn.textContent = 'Anmeldung…';
-
-            try {
-                const res = await fetch(API_BASE + '/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ username, password })
-                });
-                const data = await res.json();
-                if (res.ok && data.ok) {
-                    window.location.href = 'index.html';
-                } else {
-                    errEl.textContent = data.error || 'Anmeldung fehlgeschlagen.';
-                }
-            } catch (err) {
-                errEl.textContent = 'Verbindung zum Server fehlgeschlagen.';
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Anmelden';
-            }
+        // Spinner einblenden beim Klick auf den Button
+        document.getElementById('loginBtn').addEventListener('click', function() {
+            this.style.opacity = '0.7';
+            this.style.pointerEvents = 'none';
+            document.getElementById('redirecting').style.display = 'flex';
         });
 
-        // Falls bereits eingeloggt → direkt weiter
+        // URL-Parameter auf Fehlermeldungen prüfen (z. B. nach fehlgeschlagenem Callback)
+        const params = new URLSearchParams(window.location.search);
+        const err = params.get('error');
+        if (err) {
+            const messages = {
+                'no_permission': 'Ihr Konto hat keinen Zugriff auf diese Anwendung. Bei Problemen wenden Sie sich an das Hochschulreporting (hochschulreporting@bcw-gruppe.de).',
+                'auth_failed':   'Die Anmeldung ist fehlgeschlagen. Bitte versuchen Sie es erneut.',
+                'invalid_state': 'Sicherheitsfehler: Bitte starten Sie die Anmeldung neu.',
+            };
+            document.getElementById('loginError').textContent = messages[err] || 'Anmeldung fehlgeschlagen.';
+        }
+
+        // Bereits eingeloggt → direkt zur Hauptseite
         (async () => {
             try {
-                const res = await fetch(API_BASE + '/me', { credentials: 'include' });
+                const res = await fetch('/api/auth/me', { credentials: 'include' });
                 if (res.ok) {
                     const data = await res.json();
-                    if (data.authenticated) window.location.href = 'index.html';
+                    if (data.authenticated) window.location.href = '/';
                 }
             } catch(e) {}
         })();

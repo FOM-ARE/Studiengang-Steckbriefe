@@ -75,10 +75,12 @@ def create_app(config_name: str | None = None) -> Flask:
     from studiengang_steckbriefe.web.cache_mgmt import cache_mgmt_bp
     from studiengang_steckbriefe.web.debug import debug_bp
     from studiengang_steckbriefe.web.health import health_bp
+    from studiengang_steckbriefe.web.main import main_bp
     from studiengang_steckbriefe.web.steckbrief import steckbrief_bp
     from studiengang_steckbriefe.web.studiengaenge import studiengaenge_bp
     from studiengang_steckbriefe.web.users import users_bp
 
+    app.register_blueprint(main_bp)
     app.register_blueprint(health_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(users_bp)

@@ -3545,7 +3545,7 @@
 
         async function checkAuth() {
             try {
-                const res = await fetch(API_BASE + '/me', { credentials: 'include' });
+                const res = await fetch(API_BASE + '/auth/me', { credentials: 'include' });
                 if (res.ok) {
                     const data = await res.json();
                     if (data.authenticated) {
@@ -3562,14 +3562,14 @@
                 }
             } catch(e) {}
             // Nicht eingeloggt → Redirect zur Login-Seite
-            window.location.href = 'login.html';
+            window.location.href = '/login';
         }
 
         async function doLogout() {
             try {
-                await fetch(API_BASE + '/logout', { method: 'POST', credentials: 'include' });
+                await fetch(API_BASE + '/auth/logout', { method: 'POST', credentials: 'include' });
             } catch(e) {}
-            window.location.href = 'login.html';
+            window.location.href = '/login';
         }
 
         document.addEventListener('DOMContentLoaded', () => checkAuth());
