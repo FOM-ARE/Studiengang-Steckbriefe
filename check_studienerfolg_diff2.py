@@ -1,4 +1,5 @@
 """Compare C_StudienEin_ausstieg vs App SJS-based calculation."""
+
 import pyodbc
 
 conn = pyodbc.connect(
@@ -30,10 +31,10 @@ ORDER BY Anzahl DESC
 """)
 rows = c.fetchall()
 total = sum(r[1] for r in rows)
-print(f"=== C_StudienEin_ausstieg (Gueltige_Codierung=1) ===")
+print("=== C_StudienEin_ausstieg (Gueltige_Codierung=1) ===")
 print(f"Total: {total}")
 for r in rows:
-    print(f"  {str(r[0] or 'NULL'):20s}: {r[1]:5d} ({round(r[1]/total*100,1)}%)")
+    print(f"  {str(r[0] or 'NULL'):20s}: {r[1]:5d} ({round(r[1] / total * 100, 1)}%)")
 
 # 2) C_StudienEin_ausstieg OHNE Gueltige_Codierung Filter
 c.execute("""
@@ -55,18 +56,18 @@ ORDER BY Anzahl DESC
 """)
 rows2 = c.fetchall()
 total2 = sum(r[1] for r in rows2)
-print(f"\n=== C_StudienEin_ausstieg (ALLE, ohne Gueltige_Codierung) ===")
+print("\n=== C_StudienEin_ausstieg (ALLE, ohne Gueltige_Codierung) ===")
 print(f"Total: {total2}")
 for r in rows2:
-    print(f"  {str(r[0] or 'NULL'):20s}: {r[1]:5d} ({round(r[1]/total2*100,1)}%)")
+    print(f"  {str(r[0] or 'NULL'):20s}: {r[1]:5d} ({round(r[1] / total2 * 100, 1)}%)")
 
 # 3) App-Ergebnis zum Vergleich
-print(f"\n=== App (SJS-basiert) ===")
-print(f"Total: 12518")
-print(f"  Eingeschrieben_R:  5995 (47.9%)")
-print(f"  Eingeschrieben_V:  1120 (8.9%)")
-print(f"  Abbrecher:         2127 (17.0%)")
-print(f"  Absolvent:         1925 (15.4%)")
-print(f"  Wechsler:          1351 (10.8%)")
+print("\n=== App (SJS-basiert) ===")
+print("Total: 12518")
+print("  Eingeschrieben_R:  5995 (47.9%)")
+print("  Eingeschrieben_V:  1120 (8.9%)")
+print("  Abbrecher:         2127 (17.0%)")
+print("  Absolvent:         1925 (15.4%)")
+print("  Wechsler:          1351 (10.8%)")
 
 conn.close()

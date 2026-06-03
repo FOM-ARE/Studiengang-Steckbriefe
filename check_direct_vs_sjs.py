@@ -1,5 +1,8 @@
 import pyodbc
-conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=ms-sql-107.bcw-intern.local,1433;DATABASE=BCW_DWH;Trusted_Connection=yes')
+
+conn = pyodbc.connect(
+    "DRIVER={ODBC Driver 17 for SQL Server};SERVER=ms-sql-107.bcw-intern.local,1433;DATABASE=BCW_DWH;Trusted_Connection=yes"
+)
 cur = conn.cursor()
 
 # Direkt C_StudienEin_ausstieg mit Holy-Filtern (OHNE SJS-CTE)
@@ -51,26 +54,32 @@ total = 0
 null_total = 0
 clusters = {}
 for row in cur.fetchall():
-    cluster = row[0] if row[0] else 'NULL'
+    cluster = row[0] if row[0] else "NULL"
     rsz = row[1]
     cnt = row[2]
     total += cnt
-    if cluster == 'NULL':
+    if cluster == "NULL":
         null_total += cnt
     key = f"{cluster}(RSZ={rsz})"
     clusters[key] = cnt
     print(f"  {key:30s}  {cnt:6d}")
 
 denom = total - null_total
-reg = clusters.get('Eingeschrieben(RSZ=0)', 0)
-verl = clusters.get('Eingeschrieben(RSZ=1)', 0)
+reg = clusters.get("Eingeschrieben(RSZ=0)", 0)
+verl = clusters.get("Eingeschrieben(RSZ=1)", 0)
 print(f"\n  TOTAL: {total}  (davon NULL/excluded: {null_total})")
 print(f"  Denominator: {denom}")
-print(f"  regulär:      {reg:6d}  ({100*reg/denom:.1f}%)")
-print(f"  Verlängerung: {verl:6d}  ({100*verl/denom:.1f}%)")
-print(f"  Abbrecher:    {clusters.get('Abbrecher(RSZ=0)',0):6d}  ({100*clusters.get('Abbrecher(RSZ=0)',0)/denom:.1f}%)")
-print(f"  Absolvent:    {clusters.get('Absolvent(RSZ=0)',0):6d}  ({100*clusters.get('Absolvent(RSZ=0)',0)/denom:.1f}%)")
-print(f"  Wechsler:     {clusters.get('Wechsler(RSZ=0)',0):6d}  ({100*clusters.get('Wechsler(RSZ=0)',0)/denom:.1f}%)")
+print(f"  regulär:      {reg:6d}  ({100 * reg / denom:.1f}%)")
+print(f"  Verlängerung: {verl:6d}  ({100 * verl / denom:.1f}%)")
+print(
+    f"  Abbrecher:    {clusters.get('Abbrecher(RSZ=0)', 0):6d}  ({100 * clusters.get('Abbrecher(RSZ=0)', 0) / denom:.1f}%)"
+)
+print(
+    f"  Absolvent:    {clusters.get('Absolvent(RSZ=0)', 0):6d}  ({100 * clusters.get('Absolvent(RSZ=0)', 0) / denom:.1f}%)"
+)
+print(
+    f"  Wechsler:     {clusters.get('Wechsler(RSZ=0)', 0):6d}  ({100 * clusters.get('Wechsler(RSZ=0)', 0) / denom:.1f}%)"
+)
 
 # Auch: Zustand-Check - wie viele haben Zustand != 1 (aus SJS)?
 print("\n=== Vergleich: SJS-CTE Ansatz (Holy-aligned) ===")
@@ -128,13 +137,16 @@ cur.execute("""
 total2 = 0
 null2 = 0
 for row in cur.fetchall():
-    c = row[0] if row[0] else 'NULL'
+    c = row[0] if row[0] else "NULL"
     total2 += row[1]
-    if c == 'NULL': null2 += row[1]
+    if c == "NULL":
+        null2 += row[1]
     print(f"  {c:15s}  {row[1]:6d}")
-print(f"  SJS-Total: {total2}, Denom: {total2-null2}")
+print(f"  SJS-Total: {total2}, Denom: {total2 - null2}")
 
 # Differenz: welche StudienEintraege sind in cea aber nicht in SJS-CTE?
-print(f"\n  Differenz cea-direkt vs SJS: {denom} vs {total2-null2} = {denom - (total2-null2)} mehr in cea")
+print(
+    f"\n  Differenz cea-direkt vs SJS: {denom} vs {total2 - null2} = {denom - (total2 - null2)} mehr in cea"
+)
 
 conn.close()

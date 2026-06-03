@@ -26,7 +26,9 @@ for r in cur.fetchall():
 
 print()
 print("=== dwh.Lehrgaenge - ZeitmodellDetail (sample) ===")
-cur.execute("SELECT DISTINCT TOP 10 ZeitmodellDetail FROM BCW_DWH.dwh.Lehrgaenge WHERE Institut='FOM'")
+cur.execute(
+    "SELECT DISTINCT TOP 10 ZeitmodellDetail FROM BCW_DWH.dwh.Lehrgaenge WHERE Institut='FOM'"
+)
 for r in cur.fetchall():
     print(f"  '{r[0]}'")
 

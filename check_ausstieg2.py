@@ -1,5 +1,8 @@
 import pyodbc
-conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=ms-sql-107.bcw-intern.local,1433;DATABASE=BCW_DWH;Trusted_Connection=yes')
+
+conn = pyodbc.connect(
+    "DRIVER={ODBC Driver 17 for SQL Server};SERVER=ms-sql-107.bcw-intern.local,1433;DATABASE=BCW_DWH;Trusted_Connection=yes"
+)
 cur = conn.cursor()
 
 # Test with Holy-aligned WHERE clause
@@ -65,7 +68,7 @@ print("=== Holy-aligned CTE (BBA, 5-Jahres-Kohorte) ===")
 total = 0
 clusters = {}
 for row in cur.fetchall():
-    cluster = row[0] if row[0] else 'NULL'
+    cluster = row[0] if row[0] else "NULL"
     rsz = row[1]
     cnt = row[2]
     total += cnt
@@ -73,15 +76,21 @@ for row in cur.fetchall():
     clusters[key] = cnt
     print(f"  {key:30s}  {cnt:6d}")
 
-denom = total - clusters.get('NULL(RSZ=0)', 0)
-reg = clusters.get('Eingeschrieben(RSZ=0)', 0)
-verl = clusters.get('Eingeschrieben(RSZ=1)', 0)
+denom = total - clusters.get("NULL(RSZ=0)", 0)
+reg = clusters.get("Eingeschrieben(RSZ=0)", 0)
+verl = clusters.get("Eingeschrieben(RSZ=1)", 0)
 print(f"\n  TOTAL: {total}")
 print(f"  Denominator (excl NULL): {denom}")
-print(f"  regulär:      {reg:6d}  ({100*reg/denom:.1f}%)")
-print(f"  Verlängerung: {verl:6d}  ({100*verl/denom:.1f}%)")
-print(f"  Abbrecher:    {clusters.get('Abbrecher(RSZ=0)',0):6d}  ({100*clusters.get('Abbrecher(RSZ=0)',0)/denom:.1f}%)")
-print(f"  Absolvent:    {clusters.get('Absolvent(RSZ=0)',0):6d}  ({100*clusters.get('Absolvent(RSZ=0)',0)/denom:.1f}%)")
-print(f"  Wechsler:     {clusters.get('Wechsler(RSZ=0)',0):6d}  ({100*clusters.get('Wechsler(RSZ=0)',0)/denom:.1f}%)")
+print(f"  regulär:      {reg:6d}  ({100 * reg / denom:.1f}%)")
+print(f"  Verlängerung: {verl:6d}  ({100 * verl / denom:.1f}%)")
+print(
+    f"  Abbrecher:    {clusters.get('Abbrecher(RSZ=0)', 0):6d}  ({100 * clusters.get('Abbrecher(RSZ=0)', 0) / denom:.1f}%)"
+)
+print(
+    f"  Absolvent:    {clusters.get('Absolvent(RSZ=0)', 0):6d}  ({100 * clusters.get('Absolvent(RSZ=0)', 0) / denom:.1f}%)"
+)
+print(
+    f"  Wechsler:     {clusters.get('Wechsler(RSZ=0)', 0):6d}  ({100 * clusters.get('Wechsler(RSZ=0)', 0) / denom:.1f}%)"
+)
 
 conn.close()

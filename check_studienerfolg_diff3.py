@@ -1,4 +1,5 @@
 """Check C_StudienEin_ausstieg split by Ausstiegsstatus for Eingeschrieben."""
+
 import pyodbc
 
 conn = pyodbc.connect(
@@ -47,7 +48,7 @@ WHERE l.Institut = 'FOM' AND p.Testperson = 0
 total_all = c.fetchone()[0]
 
 print(f"Gesamt (ohne NULL): {total_all}")
-print(f"Eingeschrieben gesamt: {total_eingeschr} ({round(total_eingeschr/total_all*100,1)}%)")
+print(f"Eingeschrieben gesamt: {total_eingeschr} ({round(total_eingeschr / total_all * 100, 1)}%)")
 print()
 print(f"{'Status':<6} {'Status_lang':<40} {'Anzahl':>6} {'% Gesamt':>10} {'% Eingeschr':>12}")
 print("-" * 80)
@@ -55,23 +56,25 @@ print("-" * 80)
 verl = 0
 reg = 0
 for r in rows:
-    status = r[0] or ''
-    status_lang = r[1] or ''
+    status = r[0] or ""
+    status_lang = r[1] or ""
     cnt = r[2]
     pct_all = round(cnt / total_all * 100, 1)
     pct_ein = round(cnt / total_eingeschr * 100, 1)
     print(f"{status:<6} {status_lang:<40} {cnt:>6} {pct_all:>9.1f}% {pct_ein:>11.1f}%")
-    if 'V' in status and status != 'WSGO':
+    if "V" in status and status != "WSGO":
         verl += cnt
     else:
         reg += cnt
 
 print()
-print(f"Regulaer (nicht V): {reg} ({round(reg/total_all*100,1)}%)")
-print(f"Verlaengerer (V):   {verl} ({round(verl/total_all*100,1)}%)")
+print(f"Regulaer (nicht V): {reg} ({round(reg / total_all * 100, 1)}%)")
+print(f"Verlaengerer (V):   {verl} ({round(verl / total_all * 100, 1)}%)")
 print()
-print(f"=== Vergleich ===")
-print(f"C_StudienEin_ausstieg aktiv regulaer: {reg}/{total_all} = {round(reg/total_all*100,1)}%")
-print(f"App (SJS-basiert) aktiv regulaer:     5995/12518 = 47.9%")
+print("=== Vergleich ===")
+print(
+    f"C_StudienEin_ausstieg aktiv regulaer: {reg}/{total_all} = {round(reg / total_all * 100, 1)}%"
+)
+print("App (SJS-basiert) aktiv regulaer:     5995/12518 = 47.9%")
 
 conn.close()

@@ -1,4 +1,5 @@
 """Check why app shows 47.9% aktiv-regulär vs user's 49.4%."""
+
 import pyodbc
 
 conn = pyodbc.connect(
@@ -91,7 +92,7 @@ for r in rows:
     totals[cluster] = totals.get(cluster, 0) + cnt
 
 gesamt_mit_null = sum(totals.values())
-gesamt_ohne_null = sum(v for k, v in totals.items() if not k.startswith('NULL'))
+gesamt_ohne_null = sum(v for k, v in totals.items() if not k.startswith("NULL"))
 
 print(f"Gesamt (inkl. NULL): {gesamt_mit_null}")
 print(f"Gesamt (ohne NULL = App-Denominator): {gesamt_ohne_null}")
@@ -100,12 +101,12 @@ print()
 for cluster in sorted(totals.keys()):
     cnt = totals[cluster]
     pct_mit = round(cnt / gesamt_mit_null * 100, 1)
-    pct_ohne = round(cnt / gesamt_ohne_null * 100, 1) if not cluster.startswith('NULL') else '-'
+    pct_ohne = round(cnt / gesamt_ohne_null * 100, 1) if not cluster.startswith("NULL") else "-"
     print(f"  {cluster:20s}: {cnt:5d}  ({pct_mit}% von Gesamt | {pct_ohne}% ohne NULL)")
 
-print(f"\n--- NULL-Details ---")
+print("\n--- NULL-Details ---")
 for r in rows:
-    if r[2].startswith('NULL'):
+    if r[2].startswith("NULL"):
         print(f"  Status='{r[0]}', Exmatgrund='{r[1]}', Cluster={r[2]}, Anzahl={r[3]}")
 
 conn.close()

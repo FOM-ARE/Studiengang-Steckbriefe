@@ -1,5 +1,8 @@
 import pyodbc
-conn = pyodbc.connect('DRIVER={SQL Server};SERVER=ms-sql-107.bcw-intern.local,1433;DATABASE=BCW_DWH;Trusted_Connection=yes')
+
+conn = pyodbc.connect(
+    "DRIVER={SQL Server};SERVER=ms-sql-107.bcw-intern.local,1433;DATABASE=BCW_DWH;Trusted_Connection=yes"
+)
 cur = conn.cursor()
 
 # Suche nach der Quelle der Excel-Daten (studiengang_tn_ID)
@@ -9,9 +12,9 @@ cur.execute("""
     WHERE COLUMN_NAME LIKE '%studiengang_tn%'
     ORDER BY TABLE_NAME
 """)
-print('Tabellen mit studiengang_tn_ID:')
+print("Tabellen mit studiengang_tn_ID:")
 for row in cur.fetchall():
-    print(f'  {row[0]}.{row[1]}.{row[2]}')
+    print(f"  {row[0]}.{row[1]}.{row[2]}")
 
 print()
 
@@ -22,9 +25,9 @@ cur.execute("""
     WHERE COLUMN_NAME LIKE '%Verlaengerung%' OR COLUMN_NAME LIKE '%Verlängerung%'
     ORDER BY TABLE_NAME
 """)
-print('Tabellen mit Verlaengerung-Spalten:')
+print("Tabellen mit Verlaengerung-Spalten:")
 for row in cur.fetchall():
-    print(f'  {row[0]}.{row[1]}.{row[2]}')
+    print(f"  {row[0]}.{row[1]}.{row[2]}")
 
 print()
 
@@ -35,9 +38,9 @@ cur.execute("""
     WHERE COLUMN_NAME LIKE '%Cluster_Status%' OR COLUMN_NAME LIKE '%studiengang_tn%'
     ORDER BY TABLE_NAME
 """)
-print('BCW_STA Tabellen mit Cluster/tn_ID:')
+print("BCW_STA Tabellen mit Cluster/tn_ID:")
 for row in cur.fetchall():
-    print(f'  {row[0]}.{row[1]}.{row[2]}')
+    print(f"  {row[0]}.{row[1]}.{row[2]}")
 
 print()
 
@@ -53,9 +56,9 @@ cur.execute("""
       AND AusstiegsCluster = 'Eingeschrieben'
     GROUP BY RegelstudienzeitAbgeschlossen, AusstiegsCluster
 """)
-print('C_StudienEin_ausstieg BBA Eingeschriebene nach RSZ:')
+print("C_StudienEin_ausstieg BBA Eingeschriebene nach RSZ:")
 for row in cur.fetchall():
-    rsz_label = 'Verlaengerung' if row[0] == 1 else 'regulaer'
-    print(f'  RSZ={row[0]} ({rsz_label}): {row[2]}')
+    rsz_label = "Verlaengerung" if row[0] == 1 else "regulaer"
+    print(f"  RSZ={row[0]} ({rsz_label}): {row[2]}")
 
 conn.close()

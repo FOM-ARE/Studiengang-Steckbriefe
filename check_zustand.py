@@ -39,13 +39,16 @@ cur.execute("""
 """)
 sample_id = cur.fetchone()[0]
 print(f"  StudienEintragFID = {sample_id}")
-cur.execute("""
+cur.execute(
+    """
     SELECT sjs.Zustand, sjs.Status, sjs.Fachsemester, sem.SemesterKuerzel, sem.SemesterStart
     FROM BCW_DWH.dwh.StudierendenstatusJeSemester sjs
     JOIN BCW_DWH.dwh.Semester sem ON sem.SemesterID = sjs.SemesterID
     WHERE sjs.StudienEintragFID = ?
     ORDER BY sem.SemesterStart
-""", sample_id)
+""",
+    sample_id,
+)
 for r in cur.fetchall():
     print(f"  Zustand={r[0]}, Status={r[1]:<40}, FS={r[2]}, Sem={r[3]}, Start={r[4]}")
 
@@ -63,13 +66,16 @@ cur.execute("""
 """)
 sample_id2 = cur.fetchone()[0]
 print(f"  StudienEintragFID = {sample_id2}")
-cur.execute("""
+cur.execute(
+    """
     SELECT sjs.Zustand, sjs.Status, sjs.Fachsemester, sem.SemesterKuerzel, sem.SemesterStart
     FROM BCW_DWH.dwh.StudierendenstatusJeSemester sjs
     JOIN BCW_DWH.dwh.Semester sem ON sem.SemesterID = sjs.SemesterID
     WHERE sjs.StudienEintragFID = ?
     ORDER BY sem.SemesterStart
-""", sample_id2)
+""",
+    sample_id2,
+)
 for r in cur.fetchall():
     print(f"  Zustand={r[0]}, Status={r[1]:<40}, FS={r[2]}, Sem={r[3]}, Start={r[4]}")
 

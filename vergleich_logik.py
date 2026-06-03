@@ -1,10 +1,13 @@
 """Vergleich der Klassifikationslogik: CSV/Excel vs API"""
+
 import csv
 from collections import defaultdict
 
 # CSV lesen (die 543 ungültigen Einträge)
-with open(r'D:\Users\anke.rebach\Documents\BBA_Ungueltige_Codierung_543.csv', 'r', encoding='utf-8-sig') as f:
-    reader = csv.DictReader(f, delimiter=';')
+with open(
+    r"D:\Users\anke.rebach\Documents\BBA_Ungueltige_Codierung_543.csv", encoding="utf-8-sig"
+) as f:
+    reader = csv.DictReader(f, delimiter=";")
     rows = list(reader)
 
 print("=" * 80)
@@ -14,11 +17,11 @@ print("=" * 80)
 # 1) Wieviele LehrgangsIDs haben mehrere Einträge?
 lehrgang_map = defaultdict(list)
 for r in rows:
-    lehrgang_map[r['LehrgangsID']].append(r)
+    lehrgang_map[r["LehrgangsID"]].append(r)
 
 single = sum(1 for v in lehrgang_map.values() if len(v) == 1)
 multi = sum(1 for v in lehrgang_map.values() if len(v) > 1)
-print(f"\n1) STRUKTUR DER 543 UNGÜLTIGEN EINTRÄGE:")
+print("\n1) STRUKTUR DER 543 UNGÜLTIGEN EINTRÄGE:")
 print(f"   Distinct LehrgangsIDs: {len(lehrgang_map)}")
 print(f"   Davon mit 1 Eintrag:   {single}")
 print(f"   Davon mit >1 Einträge: {multi}")
@@ -28,11 +31,13 @@ if multi > 0:
     example_lg = max(lehrgang_map.items(), key=lambda x: len(x[1]))
     print(f"\n   Beispiel LehrgangsID {example_lg[0]} ({len(example_lg[1])} Einträge):")
     for r in example_lg[1][:5]:
-        print(f"     StudienEintragID={r['StudienEintragID']}, Cluster={r['AusstiegsCluster']}, "
-              f"Status={r['Ausstiegsstatus']}, RSZ={r['RegelstudienzeitAbgeschlossen']}, FS={r['AktuellesFachsemester']}")
+        print(
+            f"     StudienEintragID={r['StudienEintragID']}, Cluster={r['AusstiegsCluster']}, "
+            f"Status={r['Ausstiegsstatus']}, RSZ={r['RegelstudienzeitAbgeschlossen']}, FS={r['AktuellesFachsemester']}"
+        )
 
 # 2) AusstiegsCluster-Werte in der CSV
-print(f"\n2) AUSSTIEGSCLUSTER-WERTE (C_StudienEin_ausstieg):")
+print("\n2) AUSSTIEGSCLUSTER-WERTE (C_StudienEin_ausstieg):")
 cluster_vals = defaultdict(int)
 for r in rows:
     key = f"{r['AusstiegsCluster']}|Status={r['Ausstiegsstatus']}|RSZ={r['RegelstudienzeitAbgeschlossen']}"

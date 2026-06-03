@@ -3,6 +3,7 @@ Rewrite der MySQL-View V_Bw_Studienausstieg fuer das DWH (SQL Server).
 Verwendet: StudierendenstatusJeSemester, StudienEintraege, Lehrgaenge, Personen, Semester
 Ziel: Studienerfolg-Berechnung mit gleicher Logik wie Holy-View.
 """
+
 import pyodbc
 
 conn = pyodbc.connect(
@@ -116,6 +117,7 @@ cur.execute(SQL_STUDIENERFOLG_NEW)
 rows = cur.fetchall()
 
 from collections import defaultdict
+
 totals = defaultdict(int)
 grand_total = 0
 
@@ -123,18 +125,18 @@ for r in rows:
     fachsem, cluster, rsz, anzahl = r
     if cluster is None:
         continue
-    key = f"{cluster}_RSZ{rsz}" if cluster == 'Eingeschrieben' else cluster
+    key = f"{cluster}_RSZ{rsz}" if cluster == "Eingeschrieben" else cluster
     totals[key] += anzahl
     grand_total += anzahl
 
 print(f"\nGesamt: {grand_total}")
-print(f"\nKategorie-Verteilung:")
-for k in ['Eingeschrieben_RSZ0', 'Eingeschrieben_RSZ1', 'Abbrecher', 'Absolvent', 'Wechsler']:
+print("\nKategorie-Verteilung:")
+for k in ["Eingeschrieben_RSZ0", "Eingeschrieben_RSZ1", "Abbrecher", "Absolvent", "Wechsler"]:
     v = totals.get(k, 0)
     pct = v / grand_total * 100 if grand_total > 0 else 0
     print(f"  {k:<30} {v:>6}  ({pct:.1f}%)")
 
-print(f"\nVergleich mit altem Query (C_StudienEin_ausstieg, gleicher Filter):")
+print("\nVergleich mit altem Query (C_StudienEin_ausstieg, gleicher Filter):")
 print(f"  {'Alt: Eingeschrieben RSZ=0':<30} {'3893':>6}  (39.2%)")
 print(f"  {'Alt: Eingeschrieben RSZ=1':<30} {'1098':>6}  (11.1%)")
 print(f"  {'Alt: Abbrecher':<30} {'1897':>6}")
@@ -143,7 +145,7 @@ print(f"  {'Alt: Wechsler':<30} {'1220':>6}")
 print(f"  {'Alt: GESAMT':<30} {'9931':>6}")
 
 # Check: NULL/excluded rows
-print(f"\nAusgeschlossene (NULL-Cluster):")
+print("\nAusgeschlossene (NULL-Cluster):")
 cur.execute("""
 WITH LatestStatus AS (
     SELECT 

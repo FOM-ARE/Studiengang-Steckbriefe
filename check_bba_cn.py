@@ -1,5 +1,8 @@
 import pyodbc
-conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=ms-sql-107.bcw-intern.local,1433;DATABASE=BCW_DWH;Trusted_Connection=yes')
+
+conn = pyodbc.connect(
+    "DRIVER={ODBC Driver 17 for SQL Server};SERVER=ms-sql-107.bcw-intern.local,1433;DATABASE=BCW_DWH;Trusted_Connection=yes"
+)
 cur = conn.cursor()
 
 # Check: gibt es BBA_CN als eigenes Produktkuerzel oder ist es in BBA enthalten?
