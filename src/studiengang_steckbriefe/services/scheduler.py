@@ -22,11 +22,11 @@ def init_scheduler(app):
     _scheduler = Scheduler()
     _scheduler.add_schedule(
         scheduled_cache_reload,
-        CronTrigger(hour=3, minute=0),
+        CronTrigger(hour=5, minute=30),
         id="daily_cache_reload",
     )
     _scheduler.start_in_background()
-    app.logger.info("Scheduler gestartet (Cache-Reload taeglich um 03:00)")
+    app.logger.info("Scheduler gestartet (Cache-Reload taeglich um 05:30)")
 
 
 def shutdown_scheduler():

@@ -52,6 +52,12 @@ def load_keyvault_secrets(app):
         except Exception:
             pass  # Windows Auth benoetigt kein gespeichertes Secret
 
+        # DWH User (optional - fuer SQL Auth)
+        try:
+            app.config["DWH_USER"] = client.get_secret("dwh-user").value
+        except Exception:
+            app.logger.warning("Secret 'dwh-user' nicht im Key Vault gefunden")
+
         app.logger.info("Key Vault Secrets erfolgreich geladen")
 
     except Exception as exc:

@@ -33,6 +33,8 @@ class Config:
     DWH_PORT = os.environ.get("DWH_PORT", "1433")
     DWH_DATABASE = os.environ.get("DWH_DATABASE", "BCW_DWH")
     DWH_AUTHENTICATION = os.environ.get("DWH_AUTHENTICATION", "Windows")
+    DWH_USER = os.environ.get("DWH_USER", "")
+    DWH_PASSWORD = os.environ.get("DWH_PASSWORD", "")
 
     # MariaDB (Konfigurations-DB)
     MARIADB_HOST = os.environ.get("DB_HOST", "mariadb.bcw-intern.local")
