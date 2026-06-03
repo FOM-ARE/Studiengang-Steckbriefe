@@ -56,6 +56,13 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.ruff.lint.per-file-ignores]
 "src/studiengang_steckbriefe/services/queries.py" = ["E501"]
 "src/studiengang_steckbriefe/services/steckbrief.py" = ["E501"]
+"check_*.py" = ["E501", "E402"]
+"compare_*.py" = ["E501"]
+"find_*.py" = ["E501"]
+"fix_*.py" = ["E501"]
+"show_*.py" = ["E501"]
+"test_new_query.py" = ["E501", "E402"]
+"vergleich_logik.py" = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"

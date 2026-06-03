@@ -1,17 +1,29 @@
 """Detailvergleich BBA: Excel (C_Studierendenzahlen) vs API (C_StudienEin_ausstieg)"""
-import openpyxl
+
 from collections import defaultdict
 
-wb = openpyxl.load_workbook(r'D:\Users\anke.rebach\Documents\Studienabschluss.xlsx', data_only=True)
+import openpyxl
+
+wb = openpyxl.load_workbook(r"D:\Users\anke.rebach\Documents\Studienabschluss.xlsx", data_only=True)
 ws = wb.active
 
 # Header-Index erstellen
 headers = list(next(ws.iter_rows(min_row=1, max_row=1, values_only=True)))
 print("Relevante Spalten:")
 for i, h in enumerate(headers):
-    if h in ('Produktkuerzel', 'Kohorte', 'Semester', 'Cluster_Statuskuerzel', 
-             'Statuskuerzel', 'FachSem', 'Studienort', 'noch_eingeschrieben',
-             'Regelstudienzeit', 'AnzahlVerlängerungsSem', 'Verlaengerungssem_Cluster'):
+    if h in (
+        "Produktkuerzel",
+        "Kohorte",
+        "Semester",
+        "Cluster_Statuskuerzel",
+        "Statuskuerzel",
+        "FachSem",
+        "Studienort",
+        "noch_eingeschrieben",
+        "Regelstudienzeit",
+        "AnzahlVerlängerungsSem",
+        "Verlaengerungssem_Cluster",
+    ):
         print(f"  [{i}] {h}")
 
 print()
@@ -22,7 +34,7 @@ print("=" * 80)
 # BBA filtern
 bba_data = []
 for row in ws.iter_rows(min_row=2, values_only=True):
-    if row[6] == 'BBA':
+    if row[6] == "BBA":
         bba_data.append(row)
 
 print(f"\nExcel: {len(bba_data)} BBA-Datensaetze")
@@ -38,11 +50,11 @@ for k in sorted(kohorten.keys()):
     print(f"  {k}: {kohorten[k]}")
 
 # API Filter: Kohorte >= '2021-WS' (5 Jahre zurueck von 2026)
-api_filter_kohorten = [k for k in sorted(kohorten.keys()) if k >= '2021-WS']
+api_filter_kohorten = [k for k in sorted(kohorten.keys()) if k >= "2021-WS"]
 print(f"\nKohorten die der API-Filter (>= 2021-WS) erfasst: {api_filter_kohorten}")
 
 # Nur BBA-Daten die dem API-Filter entsprechen
-bba_api_filtered = [r for r in bba_data if r[13] >= '2021-WS']
+bba_api_filtered = [r for r in bba_data if r[13] >= "2021-WS"]
 print(f"BBA nach API-Kohortenfilter: {len(bba_api_filtered)} Datensaetze")
 print()
 
@@ -54,7 +66,7 @@ for row in bba_api_filtered:
 total_filtered = sum(cluster_filtered.values())
 print("--- Cluster nach API-Kohortenfilter (Excel) ---")
 for k, v in sorted(cluster_filtered.items(), key=lambda x: -x[1]):
-    print(f"  {k}: {v} ({v/total_filtered*100:.1f}%)")
+    print(f"  {k}: {v} ({v / total_filtered * 100:.1f}%)")
 print(f"  GESAMT: {total_filtered}")
 
 print()
@@ -69,23 +81,23 @@ print()
 print("--- Vergleich: Excel (gefiltert) vs API ---")
 # Mapping: Excel-Cluster -> API-Cluster
 mapping = {
-    'Abbrecher': 'Abbrecher',
-    'Wechsler': 'Wechsler',
-    'regulär eingeschrieben': 'aktiv (regulaer)',
-    'eingeschrieben in der Verlängerung': 'aktiv (Verlaengerung)',
-    'Absolventen': 'Absolventen'
+    "Abbrecher": "Abbrecher",
+    "Wechsler": "Wechsler",
+    "regulär eingeschrieben": "aktiv (regulaer)",
+    "eingeschrieben in der Verlängerung": "aktiv (Verlaengerung)",
+    "Absolventen": "Absolventen",
 }
 api_pcts = {
-    'Abbrecher': 17.0,
-    'Wechsler': 10.9,
-    'regulär eingeschrieben': 47.9,
-    'eingeschrieben in der Verlängerung': 9.0,
-    'Absolventen': 15.3
+    "Abbrecher": 17.0,
+    "Wechsler": 10.9,
+    "regulär eingeschrieben": 47.9,
+    "eingeschrieben in der Verlängerung": 9.0,
+    "Absolventen": 15.3,
 }
 
 print(f"{'Kategorie':<40} {'Excel%':>8} {'API%':>8} {'Diff':>8}")
 print("-" * 70)
-for excel_cat, api_cat in mapping.items():
+for excel_cat, _api_cat in mapping.items():
     excel_pct = cluster_filtered[excel_cat] / total_filtered * 100
     api_val = api_pcts[excel_cat]
     diff = excel_pct - api_val
@@ -99,8 +111,15 @@ hsz_counts = defaultdict(int)
 for row in bba_api_filtered:
     hsz_counts[row[11]] += 1  # Studienort/Kuerzel
 
-excluded_hsz = ['Bangalore', 'Pune', 'Ahmedabad', 'Sofia', 'Venlo', 'Luxemburg']
-excluded_short = {'BAN': 'Bangalore', 'PUN': 'Pune', 'AHM': 'Ahmedabad', 'SOF': 'Sofia', 'VEN': 'Venlo', 'LUX': 'Luxemburg'}
+excluded_hsz = ["Bangalore", "Pune", "Ahmedabad", "Sofia", "Venlo", "Luxemburg"]
+excluded_short = {
+    "BAN": "Bangalore",
+    "PUN": "Pune",
+    "AHM": "Ahmedabad",
+    "SOF": "Sofia",
+    "VEN": "Venlo",
+    "LUX": "Luxemburg",
+}
 print("  Potentiell API-excluded HSZ:")
 for code in sorted(hsz_counts.keys()):
     # Check if it's an excluded one
@@ -130,7 +149,7 @@ print("   API:    Basiert auf C_StudienEin_ausstieg (Ein-/Ausstiegshistorie)")
 print()
 print("2. KOHORTENFILTER:")
 print(f"   Excel:  Alle Kohorten vorhanden ({min(kohorten.keys())} bis {max(kohorten.keys())})")
-print(f"   API:    Nur Kohorten >= 2021-WS (letzte 5 Jahre)")
+print("   API:    Nur Kohorten >= 2021-WS (letzte 5 Jahre)")
 print()
 print("3. HSZ-AUSSCHLUSS:")
 print("   Excel:  Keine HSZ ausgeschlossen")
