@@ -58,9 +58,7 @@ def load_app_permissions() -> dict[str, list[dict]]:
     """
     app_name = current_app.config["APP_NAME"]
     rows = mariadb_connector.query(
-        "SELECT Berechtigt, Recht, Typ "
-        "FROM t_app_berechtigungen "
-        "WHERE App = %s AND Aktiv = 1",
+        "SELECT Berechtigt, Recht, Typ FROM t_app_berechtigungen WHERE App = %s AND Aktiv = 1",
         (app_name,),
     )
     permissions: dict[str, list[dict]] = {}
