@@ -88,7 +88,9 @@ def callback():
         # Berechtigung pruefen
         role = get_user_role(username)
     except Exception as exc:
-        current_app.logger.exception("DB-Berechtigungspruefung fehlgeschlagen fuer '%s': %s", username, exc)
+        current_app.logger.exception(
+            "DB-Berechtigungspruefung fehlgeschlagen fuer '%s': %s", username, exc
+        )
         return redirect(url_for(LOGIN_PAGE, error="db_error"))
 
     if not role:
