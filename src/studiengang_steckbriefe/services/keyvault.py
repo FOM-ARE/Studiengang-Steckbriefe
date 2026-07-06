@@ -46,24 +46,13 @@ def load_keyvault_secrets(app):
         # MariaDB Passwort
         app.config["MARIADB_PASSWORD"] = client.get_secret("mariadb-password").value
 
-        # DWH Connection String (optional - falls SQL Auth statt Windows Auth)
+        # DWH Passwort (Secret heisst 'dwh-user' im Key Vault)
         try:
-            app.config["DWH_CONNECTION_STRING"] = client.get_secret("dwh-connection-string").value
-            app.logger.info("DWH: vollstaendiger Connection String aus Key Vault geladen")
+            app.config["DWH_PASSWORD"] = client.get_secret("dwh-user").value
+            app.config["DWH_AUTHENTICATION"] = "SQL"
+            app.logger.info("DWH: SQL-Auth aktiviert (Passwort aus Key Vault)")
         except Exception:
-            # Kein vollstaendiger Connection String → User + Passwort einzeln laden
-            try:
-                app.config["DWH_USER"] = client.get_secret("dwh-user").value
-            except Exception:
-                app.logger.warning("Secret 'dwh-user' nicht im Key Vault gefunden")
-            try:
-                app.config["DWH_PASSWORD"] = client.get_secret("dwh-password").value
-            except Exception:
-                app.logger.warning("Secret 'dwh-password' nicht im Key Vault gefunden")
-            # SQL Auth aktivieren wenn User + Password vorhanden
-            if app.config.get("DWH_USER") and app.config.get("DWH_PASSWORD"):
-                app.config["DWH_AUTHENTICATION"] = "SQL"
-                app.logger.info("DWH: SQL-Auth aktiviert (User aus Key Vault)")
+            app.logger.warning("Secret 'dwh-user' nicht im Key Vault gefunden")
 
         app.logger.info("Key Vault Secrets erfolgreich geladen")
 
