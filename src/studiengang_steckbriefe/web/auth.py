@@ -69,32 +69,36 @@ def callback():
     if not auth_code:
         return redirect(url_for(LOGIN_PAGE, error="auth_failed"))
 
-    auth = EntraIdAuth(current_app)
     try:
+        auth = EntraIdAuth(current_app)
         result = auth.acquire_token(auth_code)
+
+        # User-Info aus Token-Claims extrahieren
+        claims = result.get("id_token_claims", {})
+        username = claims.get("preferred_username", "").split("@")[0]
+        display_name = claims.get("name", username)
+
+        # Berechtigung pruefen
+        role = get_user_role(username)
+        if not role:
+            return redirect(url_for(LOGIN_PAGE, error="no_permission"))
+
+        # Session setzen
+        session.permanent = True
+        session["user"] = {
+            "username": username,
+            "displayName": display_name,
+            "email": claims.get("preferred_username", ""),
+            "role": role,
+        }
+
+        return redirect(url_for("main.index"))
+
     except ValueError:
         return redirect(url_for(LOGIN_PAGE, error="auth_failed"))
-
-    # User-Info aus Token-Claims extrahieren
-    claims = result.get("id_token_claims", {})
-    username = claims.get("preferred_username", "").split("@")[0]
-    display_name = claims.get("name", username)
-
-    # Berechtigung pruefen
-    role = get_user_role(username)
-    if not role:
-        return redirect(url_for(LOGIN_PAGE, error="no_permission"))
-
-    # Session setzen
-    session.permanent = True
-    session["user"] = {
-        "username": username,
-        "displayName": display_name,
-        "email": claims.get("preferred_username", ""),
-        "role": role,
-    }
-
-    return redirect(url_for("main.index"))
+    except Exception as exc:
+        current_app.logger.exception("Entra ID Callback fehlgeschlagen: %s", exc)
+        return redirect(url_for(LOGIN_PAGE, error="auth_failed"))
 
 
 @auth_bp.route("/api/auth/logout", methods=["POST"])
