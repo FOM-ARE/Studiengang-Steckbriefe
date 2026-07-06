@@ -1,13 +1,14 @@
 # 🧭 Backstage Setup & Nutzung – Best Practice Leitfaden
 
 ## Inhalt
+
 1 Zielbild
 2 Technische Architektur
 3 Entity-Modellierung (Katalogstruktur)
 4 Repository‑Struktur
 5 Naming‑Konventionen
 6 Techdocs
-7 Governance 
+7 Governance
 8 YAML-Beispiele
 
 ---
@@ -34,7 +35,7 @@ Backstage fungiert als **Single Source of Truth** für technische Artefakte und 
 | **Auth Provider** | Single Sign-On | Microsoft Entra ID (Azure AD) |
 | **Search Plugin** | Volltextsuche über Entities | Elasticsearch oder PostgreSQL |
 
-Zukünftig kann die Plattform um zusätzliche Komponenten erweitert werden. 
+Zukünftig kann die Plattform um zusätzliche Komponenten erweitert werden.
 
 ---
 
@@ -44,17 +45,19 @@ Zukünftig kann die Plattform um zusätzliche Komponenten erweitert werden.
 
 Jede Entität im Katalog beschreibt **einen eindeutig identifizierbaren Bestandteil** der Systemlandschaft. Die Modellierung orientiert sich an der logischen Architektur.
 
-Eine ausführliche Beschreibung aller Typen von Entitäten und ihrer Bedeutung findet sich unter: https://backstage.io/docs/features/software-catalog/system-model
+Eine ausführliche Beschreibung aller Typen von Entitäten und ihrer Bedeutung findet sich unter: <https://backstage.io/docs/features/software-catalog/system-model>
 
 Wir verwenden folgende Entitäten-Typen:
 
 Technische Entitäten
+
 - System
 - Component
 - API
 - Resource
 
 Ecosystem Entitäten
+
 - Domain
 - User
 - Group  
@@ -63,13 +66,14 @@ Jede Entität wird mit den zugehörigen Metadaten in einem "catalog-info" YAML f
 
 #### 🔹 3.1 Technische Entitäten
 
-Technische Artefakte werden durch technische Entitäten abgebildet. 
+Technische Artefakte werden durch technische Entitäten abgebildet.
 
 #### 🔹 3.1.1 System
 
 Ein System beschreibt einen **logisch zusammenhängenden Verbund von Komponenten und Ressourcen**, der gemeinsam betrieben oder verwaltet wird.
 
 Beispiele:
+
 - `system: studieneinstieg`
 - `system: anrechnung`
 - `system: elastic-stack`
@@ -91,6 +95,7 @@ Components sind **Anwendungseinheiten oder Services**, die innerhalb eines Syste
 | `infrastructure` | Infrastruktur-Komponenten (Deployment Scripts, IAC Modules...) |
 
 Beispiele:
+
 - `component: digaonlineservice, type service`
 - `component: anrechnungsservice, type service`
 - `component: kibana, type infrastructure`
@@ -101,6 +106,7 @@ Beispiele:
 Self-Contained Systems (SCS) sind autonome, in sich geschlossene Systeme. Bei der Modellierung in Backstage stellt sich die Frage nach der System-Ebene:
 
 **Empfehlung:**
+
 - **SCS direkt an Domain** (ohne `spec.system`), wenn das SCS völlig eigenständig ist und keinen fachlichen Verbund mit anderen Components bildet
 - **SCS mit System-Ebene** nur, wenn mehrere SCS/Components thematisch zusammengehören und gemeinsam einen fachlichen Kontext bilden
 
@@ -120,6 +126,7 @@ APIs ermöglichen Zugang zu Funktionen von Components oder Ressources und werden
 | `grpc` | gRPC-Services |
 
 Beispiele:
+
 - `api: digaonlineservice-mqapi, type asyncapi`
 - `api: anrechnungsservice-webapi, type openapi`
 - `api: kibana-api, type openapi`
@@ -127,7 +134,7 @@ Beispiele:
 
 #### 🔹 3.1.4 Resource
 
-Resources sind **technische Infrastrukturressourcen**, auf die Components zugreifen. Wir unterscheiden folgende Typen von Resources: 
+Resources sind **technische Infrastrukturressourcen**, auf die Components zugreifen. Wir unterscheiden folgende Typen von Resources:
 
 | Resource type | Bedeutung |
 |------------|------------|
@@ -141,6 +148,7 @@ Resources sind **technische Infrastrukturressourcen**, auf die Components zugrei
 | `server` | VM, Bare Metal, Cloud Instance... |
 
 Beispiele:
+
 - `resource: mariadb-onlineanmeldungen, type database`
 - `resource: sbq-, type queue`
 - `resource: elasticsearch-prod, type observability`
@@ -175,6 +183,7 @@ Groups repräsentieren organisatorische Einheiten, typischerweise Teams. Wir bil
 Groups werden nicht als "catalog-info" YAML files dem Katalog hinzugefügt, sondern über die Entra ID Anbindung von Backstage aus dem Entra ID-Verzeichnis importiert.
 
 Beispiele:
+
 - `group: IT.Se.Domaene.Interessenten`
 - `group: IT.Se.Domaene.Teilnehmer`
 - `group: devops-platform-orchestration-automation`
@@ -208,6 +217,7 @@ Konkrete Verwendungen von Location werden in den Abschnitten 4.2 und 4.3 aufgef�
 Backstage organisiert Entities in Namespaces, die eine logische Gruppierung ermöglichen. Standardmäßig nutzen wir den **`default` Namespace** für alle unsere Entitäten.
 
 **Vollständige Referenzierung:**
+
 ```yaml
 dependsOn:
   - resource:default/mariadb-onlineanmeldungen
@@ -216,6 +226,7 @@ dependsOn:
 
 **Verkürzte Schreibweise:**
 Wenn eine Entity im `default` Namespace liegt, kann der Namespace weggelassen werden:
+
 ```yaml
 dependsOn:
   - resource:mariadb-onlineanmeldungen
@@ -257,11 +268,11 @@ spec:
     - customer-api
   consumesApis:
     - contract-api
-``` 
+```
 
 #### 🔹 3.5.3 Entitäten Ownership
 
-Eine weitere spezielle Form der Beziehung ist die Ownership. Jede Entität benötigt einen `spec.owner`. 
+Eine weitere spezielle Form der Beziehung ist die Ownership. Jede Entität benötigt einen `spec.owner`.
 
 Ownership liegt in der Regel immer bei einem Team. Teams werden als Group Entitäten im Katalog gepflegt.
 
@@ -272,7 +283,7 @@ spec:
 
 #### 🔹 3.5.4 Entitäten Zugehörigkeit
 
-Die Zugehörigkeit einer Entität (in der Regel Component oder System) zu einer übergeordneten Entität (in der Regel System oder Domain) wird über `spec.system` oder `spec.domain` dokumentiert. 
+Die Zugehörigkeit einer Entität (in der Regel Component oder System) zu einer übergeordneten Entität (in der Regel System oder Domain) wird über `spec.system` oder `spec.domain` dokumentiert.
 
 ```yaml
 spec:
@@ -283,6 +294,7 @@ spec:
 spec:
   domain: teilnehmerbetreuung
 ```
+
 Auch hier modellieren wir diese Beziehung immer von der abhängigen Seite. Wenn also zum Beispiel meine Component Teil eines Systems ist, beschreibe ich diese Zugehörigkeit über `spec.system` in meiner Component. Die Darstellung der Zugehörigkeit vom System aus betrachtet, stellt Backstage automatisch dar.
 
 ### 🔹 3.6 Lifecycle‑Standard
@@ -328,7 +340,7 @@ metadata:
 
 #### 🔹 3.7.2 Annotations
 
-Annotations erlauben individuelle Erweiterungen, z.B. Umgebungs‑ oder Dashboard‑Links. Diese können bei Bedarf verwendet werden. Einige Beispiele für regelmäßig verwendete Annotations (teilweise mit Bezug zu spezifischen Plugins) finden sich unter https://backstage.io/docs/features/software-catalog/well-known-annotations
+Annotations erlauben individuelle Erweiterungen, z.B. Umgebungs‑ oder Dashboard‑Links. Diese können bei Bedarf verwendet werden. Einige Beispiele für regelmäßig verwendete Annotations (teilweise mit Bezug zu spezifischen Plugins) finden sich unter <https://backstage.io/docs/features/software-catalog/well-known-annotations>
 
 ```yaml
 metadata:
@@ -337,13 +349,13 @@ metadata:
     monitoring/dashboard-url: "https://grafana.local/elastic"
 ```
 
-**Wichtig:** Der Pfad für Techdocs wird ebenfalls als Annotation hinterlegt. Dieser ist nicht optional. Siehe hierzu Abschnitt `Techdocs`. 
+**Wichtig:** Der Pfad für Techdocs wird ebenfalls als Annotation hinterlegt. Dieser ist nicht optional. Siehe hierzu Abschnitt `Techdocs`.
 
 ---
 
 ## 4️⃣ Repository‑Struktur
 
-Die für die Aufnahme von Entitäten in den Backstage Katalog erforderlichen "catalog-info" YAML files werden als Teil des Codes in unseren Code Repositories gespeichert. 
+Die für die Aufnahme von Entitäten in den Backstage Katalog erforderlichen "catalog-info" YAML files werden als Teil des Codes in unseren Code Repositories gespeichert.
 
 ### 🔹 4.1 Component-Repository
 
@@ -386,7 +398,7 @@ Ins Domain-Repository gehören:
 spec:
   type: openapi
   definition:
-    $text: https://dev.azure.com/BCW-Gruppe/StudiengangSteckbriefe/openapi.yaml
+    $text: https://dev.azure.com/BCW-Gruppe/<repo>/openapi.yaml
 ```
 
 Das Domain-Repository muss nur bei strukturellen Änderungen an der API-Entität selbst angefasst werden (z.B. Namensänderung, Lifecycle-Wechsel, neuer Owner).
@@ -458,7 +470,7 @@ Dem Entitäten-Namen wird jeweils der Entitäten-Typ vorangestellt.
 
 Das "catalog-info" YAML file einer Entität wird nach folgendem Schema benannt:
 
-studiengangsteckbriefe-software-catalog-info.yaml
+<entity-name>-software-catalog-info.yaml
 
 Eine Ausnahme von diesem Schema bilden zentrale YAML files, welche in größeren Strukturen lediglich zum Verweis auf spezifische YAML files dienen (typisch bei Domain und Plattform Infrastruktur Repositories). Diese werden vereinfacht mit **software-catalog-info.yaml** bezeichnet.  
 
@@ -471,7 +483,7 @@ Für die Dokumentation unserer Entitäten nach einem docs-like-code Ansatz nutze
 ### 🔹 6.1 Abgrenzung: Dokumentationen vs. Software Katalog
 
 Dokumentationen stehen in diesem Zusammenhang für alle Dokumente und vergleichbare Artefakte, welche die Architektur und Struktur einer Entität erklären, das Onboarding von Entwicklern beschleunigen sowie Betrieb und Ownership transparent machen.
-Auch wenn der Backstage Software Katalog ebenfalls eine übergreifende Dokumentations-Funktion erfüllt, ist dieser von der spezifischen Dokumentation einer Entität abzugrenzen. 
+Auch wenn der Backstage Software Katalog ebenfalls eine übergreifende Dokumentations-Funktion erfüllt, ist dieser von der spezifischen Dokumentation einer Entität abzugrenzen.
 
 | Backstage Katalog      | Dokumentationen         |
 | ---------------------- | ----------------------- |
@@ -489,16 +501,18 @@ Für die automatisierte Verarbeitung der Dokumentationen nutzen wir einen einhei
 - Format: Markdown
 - Diagramme: Mermaid
 - Theme: mkdocs-material
-- Generator & Build: Mit MkDocs automatisiert (in Techdocs und CI integriert) 
+- Generator & Build: Mit MkDocs automatisiert (in Techdocs und CI integriert)
 
 ### 🔹 6.3 Verzeichnisstruktur für Dokumentationen von Components
 
-Alle Artefakte der Dokumentation einer Component sind im Repository der Component im Ordner `docs` gespeichert. Dort findet sich immer eine Datei `index.md`, welche eine kurze Beschreibung der Entität enthält sowie eine Datei `mkdocs.yml` für die MkDocs Konfiguration. Weiterhin findet sich dort immer mindestens eine Datei mit der Architekturdokumentation. Für komplexere Entitäten kann die Architekturdokumentation auch auf mehrere Dateien aufgeteilt werden. Für dokumentierte Architekturentscheidungen zu der Entität gibt es immer einen Unterornder `decisions`. Liegen keine Entscheidungsdokumente vor, ist der Ordner ggf. leer.  
+Alle Artefakte der Dokumentation einer Component sind im Repository der Component im Ordner `docs` gespeichert. Dort findet sich immer eine Datei `index.md`, welche eine kurze Beschreibung der Entität enthält sowie eine Datei mit der Architekturdokumentation. Für komplexere Entitäten kann die Architekturdokumentation auch auf mehrere Dateien aufgeteilt werden. Für dokumentierte Architekturentscheidungen zu der Entität gibt es immer einen Unterornder `decisions`. Liegen keine Entscheidungsdokumente vor, ist der Ordner ggf. leer.
 
-```
+Die Datei `mkdocs.yml` liegt **nicht** im `docs`-Ordner, sondern im **Stammverzeichnis des Repositories**. Dort wird `docs_dir: docs` konfiguriert, damit MkDocs den `docs`-Ordner als Quellverzeichnis verwendet.  
+
+```text
+mkdocs.yml
 /docs/
   index.md
-  mkdocs.yml
   architecture.md
   decisions/
     adr-001.md
@@ -514,12 +528,14 @@ Optional können nach individuellem Bedarf weitere Artefakte hinzugefügt werden
 Für Entitäten der Typen Domain, System, API und Resource sind Dokumentationen ebenfalls sinnvoll:
 
 Domain
+
 - Wofür steht diese Domain fachlich?
 - Welche Systeme und Teams gehören dazu?
 - Welche fachlichen und organisatorischen Leitplanken gelten?
 - Welche gemeinsamen Standards sind relevant?
 
 System
+
 - Übergreifende Architekturdokumentation mit stärkerem Fokus auf:
   - Context
   - Building Blocks
@@ -527,11 +543,13 @@ System
   - weniger technische Details
 
 API
+
 - Wofür steht diese API fachlich?
 - Welche Consumers nutzen sie und welche Anwendungsfälle werden abgedeckt?
 - Welche Versionierungs- und Kompatibilitätsregeln gelten?
 
 Resource
+
 - Was stellt diese Ressource bereit?
 - Wie wird sie genutzt (aus Sicht der Consumer)?
 - Wer betreibt sie und wie erfolgt Support?
@@ -541,50 +559,53 @@ Die Artefakte der Dokumentationen dieser Entitäten werden in den zugehörigen D
 
 Beispielstruktur einer Domain:
 
-```
+```text
 /domain-teilnehmerbetreuung/
   software-catalog-info.yaml
   domain-teilnehmerbetreuung-software-catalog-info.yaml
+  mkdocs.yml
   docs/
     index.md
-    mkdocs.yml
     overview.md
     ...
   systems/
     system-studieneinstieg/
       system-studieneinstieg-software-catalog-info.yaml
+      mkdocs.yml
       docs/
         index.md
-        mkdocs.yml
         architecture.md
         ...
     ...
   apis/
     api-anrechnungsservice-webapi/
       api-anrechnungsservice-webapi-software-catalog-info.yaml
+      mkdocs.yml
       docs/
         index.md
-        mkdocs.yml
         ...
     ...
   resources/
     resource-mariadb-shared/          # nur geteilte Resources
       resource-mariadb-shared-software-catalog-info.yaml
+      mkdocs.yml
       docs/
         index.md
-        mkdocs.yml
         ...
     ...
-``` 
+```
 
 ### 🔹 6.5 mkdocs.yml
 
-Mit Techdocs verwenden wir MkDocs zur Erzeugung der Dokumentationsseiten aus den Markdown files. Die Konfiguration von MkDocs erfolgt über ein yaml File `mkdocs.yml`, welches wie index.md im Ordner `docs` vorhanden sein muss.
+Mit Techdocs verwenden wir MkDocs zur Erzeugung der Dokumentationsseiten aus den Markdown files. Die Konfiguration von MkDocs erfolgt über ein yaml File `mkdocs.yml`, welches im **Stammverzeichnis des Repositories** (bzw. des Entity-Ordners bei Domain- und Plattform-Repositories) abgelegt wird – **nicht** im `docs`-Ordner.
 
-`site_name` ist zwingend erforderlich und wird mit dem Namen der Entität gefüllt. Im `nav` Bereich wird die globale Navigation für die Dokumentationsseiten konfiguriert. Hier ist mindestens index.md als Home sowie architecture.md für die Architekturdokumentation gesetzt. Weitere Dokumentationsartefakte sind hier individuell zu ergänzen. 
+`site_name` ist zwingend erforderlich und wird mit dem Namen der Entität gefüllt. Im `nav` Bereich wird die globale Navigation für die Dokumentationsseiten konfiguriert. Hier ist mindestens index.md als Home sowie architecture.md für die Architekturdokumentation gesetzt. Weitere Dokumentationsartefakte sind hier individuell zu ergänzen.
+
+`docs_dir: docs` ist zwingend erforderlich, da `mkdocs.yml` im Stammverzeichnis liegt und MkDocs sonst den aktuellen Ordner als Quellverzeichnis annehmen würde. Mit `docs_dir: docs` wird MkDocs explizit angewiesen, die Markdown-Dateien aus dem `docs`-Unterordner zu lesen.
 
 ```yaml
 site_name: Anrechnungsservice
+docs_dir: docs
 
 nav:
   - Home: index.md
@@ -594,7 +615,7 @@ nav:
 
 ### 🔹 6.6 Einbindung von Dokumentationen in Techdocs
 
-Um die Dokumentationen einer Entität in Techdocs einzubinden, muss der Pfad zu den Dokumentationsartefakten (in unserem Fall zum Ordner `docs`) im "catalog-info" YAML file in der `backstage.io/techdocs-ref` Annotation hinterlegt werden. Wenn der Ordner `docs` auf gleicher Ebene liegt, wie das "catalog-info" YAML file (bei einer Component Entität sollten beide im root liegen), genügt hier die Angabe von `dir:.`.    
+Um die Dokumentationen einer Entität in Techdocs einzubinden, muss der Pfad zu den Dokumentationsartefakten (in unserem Fall zum Ordner `docs`) im "catalog-info" YAML file in der `backstage.io/techdocs-ref` Annotation hinterlegt werden. Wenn der Ordner `docs` auf gleicher Ebene liegt, wie das "catalog-info" YAML file (bei einer Component Entität sollten beide im root liegen), genügt hier die Angabe von `dir:.`.
 
 ```yaml
 metadata:
@@ -612,7 +633,7 @@ Die Owner der Entitäten sind für den Import und damit die Aufnahme der Entitä
 
 ### 🔹 7.2 Pflege und Aktualität von Entities
 
-Die Owner der Entitäten sind für die regelmäßige Pflege und damit Aktualität ihrer Entitäten im Software Katalog verantwortlich. Dies schließt auch die Dokumentationen mit ein. 
+Die Owner der Entitäten sind für die regelmäßige Pflege und damit Aktualität ihrer Entitäten im Software Katalog verantwortlich. Dies schließt auch die Dokumentationen mit ein.
 
 ### 🔹 7.3 Betrieb, Wartung & Support der Backstage Plattform
 
@@ -1025,6 +1046,5 @@ spec:
 
 ---
 
-*Stand: 28. Februar 2026*
+*Stand: 15. Mai 2026*
 *Erstellt für die Einführung von Backstage und Techdocs in der BCW‑Softwarelandschaft.*
-

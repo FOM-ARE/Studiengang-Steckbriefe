@@ -209,12 +209,12 @@
 </head>
 <body>
 
-    <div class="login-card" role="main">
+    <main class="login-card">
 
         <!-- Header mit FOM-Branding -->
         <div class="card-header">
             <div class="logo-wrapper">
-                <img src="/static/images/FOM-Logo.jpg" alt="FOM Hochschule" onerror="this.parentElement.style.display='none'">
+                <img src="/static/images/FOM-Logo.jpg" alt="FOM Hochschule" id="fomLogo">
             </div>
             <h1>Studiengang-Steckbriefe</h1>
             <p>FOM Hochschule</p>
@@ -228,7 +228,7 @@
             </p>
 
             <!-- Microsoft Sign-In Button (Microsoft Branding Guidelines) -->
-            <a href="/api/auth/login" class="ms-signin-btn" id="loginBtn" role="button">
+            <button type="button" class="ms-signin-btn" id="loginBtn" onclick="window.location.href='/api/auth/login'">
                 <!-- Offizielles Windows-Logo-Icon -->
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 21 21" aria-hidden="true">
                     <rect x="1"  y="1"  width="9" height="9" fill="#f25022"/>
@@ -237,7 +237,7 @@
                     <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
                 </svg>
                 Weiter mit Microsoft
-            </a>
+            </button>
 
             <!-- Weiterleitung-Feedback -->
             <div class="redirecting" id="redirecting">
@@ -260,11 +260,16 @@
         <div class="card-footer">
             FOM Hochschule &nbsp;·&nbsp; Nur für autorisierte Mitarbeitende
         </div>
-    </div>
+    </main>
 
     <p class="page-footer">Bei Problemen wenden Sie sich an das Hochschulreporting (<a href="mailto:hochschulreporting@bcw-gruppe.de?subject=Zugriffsproblem%20Studiengang-Steckbriefe&body=Hallo%2C%0A%0Aich%20habe%20ein%20Problem%20bei%20der%20Anmeldung%20an%20den%20Studiengang-Steckbriefen.%0A%0AMein%20Windows-Login%3A%20%0AZweck%3A%20(wof%C3%BCr%20wird%20der%20Report%20von%20Ihnen%20ben%C3%B6tigt%3F)%0A%0AMit%20freundlichen%20Gr%C3%BC%C3%9Fen" style="color:#aaa;">hochschulreporting@bcw-gruppe.de</a>).</p>
 
     <script>
+        // Logo-Fallback: Wrapper ausblenden wenn Bild nicht geladen werden kann
+        document.getElementById('fomLogo').addEventListener('error', function() {
+            this.parentElement.style.display = 'none';
+        });
+
         // Spinner einblenden beim Klick auf den Button
         document.getElementById('loginBtn').addEventListener('click', function() {
             this.style.opacity = '0.7';

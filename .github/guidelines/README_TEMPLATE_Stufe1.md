@@ -1,4 +1,4 @@
-# StudiengangSteckbriefe
+# <Projektname>
 
 Kurzbeschreibung des Projekts in 2–4 Sätzen: Zweck, Zielgruppe, fachlicher Nutzen.
 

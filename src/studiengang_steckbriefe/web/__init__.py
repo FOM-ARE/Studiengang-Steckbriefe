@@ -63,11 +63,7 @@ def create_app(config_name: str | None = None) -> Flask:
                 init_queries()
                 app.config["DB_INIT_ERROR"] = None
             except Exception as exc:
-                import traceback
-
-                app.logger.error(
-                    "DB-Initialisierung fehlgeschlagen: %s\n%s", exc, traceback.format_exc()
-                )
+                app.logger.exception("DB-Initialisierung fehlgeschlagen: %s", exc)
                 app.config["DB_INIT_ERROR"] = str(exc)
 
     # Blueprints registrieren

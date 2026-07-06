@@ -19,54 +19,46 @@ Requires-Dist: pytest>=8.0; extra == "dev"
 Requires-Dist: pytest-cov>=5.0; extra == "dev"
 Requires-Dist: ruff>=0.6; extra == "dev"
 
-# FOM Studiengang-Steckbriefe – Version 5
+# StudiengangSteckbriefe
 
-Standalone-Webanwendung zur Darstellung von Studiengang-Steckbriefen mit Live-Daten aus dem DWH.
+Kurzbeschreibung des Projekts in 2–4 Sätzen: Zweck, Zielgruppe, fachlicher Nutzen.
 
-## Schnellstart
+## Verantwortlichkeit
 
-**Doppelklick auf `start_app.bat`** – startet Backend + Frontend und öffnet den Browser.
+- **Owner:** <Name, Teamname>
+- **Kontakt:** <E-Mail, Teams-Kanal, Verteiler>
+- **Support/Oncall:** <Prozess, Zeiten, Eskalation; auch „Best Effort“ möglich>
 
-Alternativ manuell:
+## Scope & Systemkontext
 
-```bash
-# 1. Backend starten
-cd backend
-pip install -r requirements.txt
-python app.py
+- **Was macht der Service?** <Kurzbeschreibung>
+- **Abhängigkeiten (Up-/Downstream):** <System A>, <System B>
+- **Nicht im Scope:** <bewusst ausgeschlossene Themen>
 
-# 2. Frontend starten (neues Terminal)
-python -m http.server 8000
+## Tech Stack
+<z. B. Backend: .NET 10, C#; Frontend: Angular21, TypeScript>
 
-# 3. Browser öffnen: http://localhost:8000
-```
+## Rollback
+<z. B. vorheriges Image-Tag redeployen, DB-Migrationsstrategie>
 
-## Voraussetzungen
+## Dependencies & Schwachstellenmanagement
 
-- Python 3.8+
-- Netzwerkzugang zu `ms-sql-107.bcw-intern.local` (Windows-Auth)
-- Pakete: `flask`, `flask-cors`, `pyodbc`, `apscheduler`
+- **Haupt-Dependencies:**
+  - <Dependency 1>
+  - <Dependency 2>
 
-## Projektstruktur
+## Architekturentscheidungen (ADRs)
 
-```
-Studiengang_Steckbriefe_Version_5/
-├── index.html          ← Frontend (Single-Page-App)
-├── start_app.bat       ← Ein-Klick-Starter
-├── backend/
-│   ├── app.py          ← Flask-API (Port 5000)
-│   └── requirements.txt
-├── assets/images/      ← Bilder
-└── docs/               ← Dokumentation
-```
+Liste aller relevanten ADRs (insb. Abweichungen von Empfehlungen/Standards):
 
-## Ports
+- [ADR-0001 – <Titel>](./docs/adr/ADR-0001-<slug>.md)
+- [ADR-0002 – <Titel>](./docs/adr/ADR-0002-<slug>.md)
 
-| Dienst   | URL                    |
-|----------|------------------------|
-| Frontend | http://localhost:8000   |
-| Backend  | http://localhost:5000   |
+---
 
-## Stand
+## Optional: Projekt-spezifische Ergänzungen
 
-Erstellt am 22.04.2026 aus Version 4 mit allen PDF-Export-Optimierungen.
+- Lokale Entwicklungsanleitung
+- Konfigurationsmatrix (Dev/Test/Prod)
+- API-Referenz / OpenAPI-Link
+- Betriebskennzahlen (SLO/SLA)

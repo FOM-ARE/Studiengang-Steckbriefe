@@ -12,6 +12,8 @@ from studiengang_steckbriefe.services.auth import (
 
 auth_bp = Blueprint("auth", __name__)
 
+LOGIN_PAGE = "main.login_page"
+
 
 def login_required(f):
     """Decorator: Prueft ob ein User eingeloggt ist."""
@@ -51,8 +53,8 @@ def login():
         auth_url = auth.get_auth_url(state=state)
         return redirect(auth_url)
     except Exception as exc:
-        current_app.logger.error("Entra ID Login fehlgeschlagen: %s", exc)
-        return redirect(url_for("main.login_page", error="auth_failed"))
+        current_app.logger.exception("Entra ID Login fehlgeschlagen: %s", exc)
+        return redirect(url_for(LOGIN_PAGE, error="auth_failed"))
 
 
 @auth_bp.route("/api/auth/callback")
@@ -61,17 +63,17 @@ def callback():
     # State validieren (CSRF-Schutz)
     state = request.args.get("state", "")
     if state != session.pop("auth_state", None):
-        return redirect(url_for("main.login_page", error="invalid_state"))
+        return redirect(url_for(LOGIN_PAGE, error="invalid_state"))
 
     auth_code = request.args.get("code")
     if not auth_code:
-        return redirect(url_for("main.login_page", error="auth_failed"))
+        return redirect(url_for(LOGIN_PAGE, error="auth_failed"))
 
     auth = EntraIdAuth(current_app)
     try:
         result = auth.acquire_token(auth_code)
     except ValueError:
-        return redirect(url_for("main.login_page", error="auth_failed"))
+        return redirect(url_for(LOGIN_PAGE, error="auth_failed"))
 
     # User-Info aus Token-Claims extrahieren
     claims = result.get("id_token_claims", {})
@@ -81,7 +83,7 @@ def callback():
     # Berechtigung pruefen
     role = get_user_role(username)
     if not role:
-        return redirect(url_for("main.login_page", error="no_permission"))
+        return redirect(url_for(LOGIN_PAGE, error="no_permission"))
 
     # Session setzen
     session.permanent = True

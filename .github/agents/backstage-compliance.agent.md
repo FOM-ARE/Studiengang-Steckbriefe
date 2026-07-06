@@ -1,7 +1,14 @@
 ---
 description: "Backstage Compliance Checker - Validiert Projekte gegen BCW Backstage-Vorgaben"
 name: "Backstage Compliance Agent"
-tools: ['read', 'search', 'edit', 'execute', 'todo']
+tools:
+  - vscode/memory
+  - search/codebase
+  - edit/editFiles
+  - execute/getTerminalOutput
+  - execute/runInTerminal
+  - read/terminalLastCommand
+  - read/terminalSelection
 model: Claude Sonnet 4.6
 ---
 
@@ -127,7 +134,7 @@ Für jede gefundene catalog-info.yaml bzw. catalog-info.yml Datei prüfe:
 - ✅ Keine Leerzeichen oder Sonderzeichen?
 
 **Dateinamen:**
-- ✅ Format: studiengangsteckbriefe-software-catalog-info.yaml oder studiengangsteckbriefe-software-catalog-info.yml
+- ✅ Format: <entity-name>-software-catalog-info.yaml oder <entity-name>-software-catalog-info.yml
 - ✅ Beide Dateiendungen (.yaml und .yml) sind gültig – keine wird als Issue gemeldet
 - ✅ Ausnahme: Zentrale Location-Dateien dürfen software-catalog-info.yaml oder software-catalog-info.yml heißen
 - ✅ Dateiname stimmt mit entity.metadata.name überein?
@@ -151,7 +158,7 @@ Für jede gefundene catalog-info.yaml bzw. catalog-info.yml Datei prüfe:
    - ✅ catalog-info.yaml oder catalog-info.yml im Root?
    - ✅ docs/ Ordner vorhanden?
    - ✅ docs/index.md existiert?
-   - ✅ docs/mkdocs.yml existiert?
+   - ✅ mkdocs.yml im Stammverzeichnis existiert?
    - ✅ docs/architecture.md existiert? (Pflicht)
    - ✅ docs/decisions/ Ordner existiert? (Pflicht)
 
@@ -178,11 +185,13 @@ automatisch in die Prüfung einfließen.
 - ✅ Existiert?
 - ✅ Enthält aussagekräftige Übersicht?
 
-**docs/mkdocs.yml:**
-- ✅ Existiert?
+**mkdocs.yml (Stammverzeichnis):**
+- ✅ Existiert im Root des Repositories (nicht in docs/)?
 - ✅ site_name gesetzt?
+- ✅ docs_dir: docs gesetzt?
 - ✅ nav-Sektion konfiguriert?
 - ✅ Mindestens index.md und architecture.md in nav?
+- ⚠️  Liegt zusätzlich/stattdessen eine `docs/mkdocs.yml` vor? (falsche Position → muss ins Stammverzeichnis verschoben werden)
 
 **docs/architecture.md:**
 - ✅ Existiert? (Pflicht für Components)
@@ -474,6 +483,6 @@ Für Details zur Verwendung, Integration und Best Practices siehe:
 
 ---
 
-**Version:** 1.3  
-**Letzte Aktualisierung:** 16. April 2026  
+**Version:** 1.4  
+**Letzte Aktualisierung:** 15. Mai 2026  
 **Maintainer:** DevOps Platform Team

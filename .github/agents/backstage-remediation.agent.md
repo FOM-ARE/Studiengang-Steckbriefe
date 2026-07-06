@@ -1,7 +1,14 @@
 ---
 description: "Backstage Remediation Agent - Behebt Compliance-Verstöße gegen BCW Backstage-Vorgaben"
 name: "Backstage Remediation Agent"
-tools: ['read', 'search', 'edit', 'todo']
+tools:
+  - vscode/memory
+  - search/codebase
+  - edit/editFiles
+  - execute/getTerminalOutput
+  - execute/runInTerminal
+  - read/terminalLastCommand
+  - read/terminalSelection
 model: Claude Sonnet 4.6
 ---
 
@@ -275,7 +282,7 @@ Die Fixes werden in folgender Reihenfolge durchgeführt:
 2️⃣ **YAML-Grundstruktur** (apiVersion, kind, metadata, spec)
 3️⃣ **Naming-Korrekturen** (Entity-Namen, Dateinamen)
 4️⃣ **YAML-Inhalte** (Pflichtfelder, Annotations, Tags)
-5️⃣ **TechDocs-Setup** (docs/, index.md, mkdocs.yml, architecture.md)
+5️⃣ **TechDocs-Setup** (docs/, index.md, mkdocs.yml im Root, architecture.md)
 6️⃣ **Beziehungen** (dependsOn, providesApis, consumesApis, Formate)
 
 **Für jeden Fix:**
@@ -312,7 +319,7 @@ Die Fixes werden in folgender Reihenfolge durchgeführt:
 
 **Metadata-Fixes:**
 - Fehlende metadata.name → Aus Dateiname ableiten
-  (Format: studiengangsteckbriefe aus studiengangsteckbriefe-software-catalog-info.yaml)
+  (Format: <entity-name> aus <entity-name>-software-catalog-info.yaml)
 - Fehlende metadata.description → User fragen
 - Fehlende backstage.io/techdocs-ref Annotation → `dir:.` ergänzen
   (nur wenn docs/ Ordner existiert oder erstellt wird)
@@ -333,7 +340,7 @@ Die Fixes werden in folgender Reihenfolge durchgeführt:
 - Sonderzeichen/Leerzeichen → Durch Bindestriche ersetzen
 
 **Dateinamen korrigieren:**
-- Format sicherstellen: `studiengangsteckbriefe-software-catalog-info.yaml` oder `studiengangsteckbriefe-software-catalog-info.yml`
+- Format sicherstellen: `<entity-name>-software-catalog-info.yaml` oder `<entity-name>-software-catalog-info.yml`
 - **Beide Dateiendungen (.yaml und .yml) sind gültig** – eine `.yml`-Datei wird NICHT in `.yaml` umbenannt
 - Ausnahme: Zentrale Location-Dateien dürfen `software-catalog-info.yaml` oder `software-catalog-info.yml` heißen
 - Dateiname an metadata.name angleichen
@@ -355,15 +362,24 @@ Die Fixes werden in folgender Reihenfolge durchgeführt:
   
   [Kurze Beschreibung der Entity und ihres Zwecks]
 
-**docs/mkdocs.yml erstellen:**
+**mkdocs.yml erstellen (im Stammverzeichnis des Repositories):**
 - site_name aus metadata.name ableiten
+- docs_dir: docs setzen (zwingend erforderlich)
 - Basis-Navigation konfigurieren:
 
   site_name: [Entity-Name]
+  docs_dir: docs
   
   nav:
     - Home: index.md
     - Architekturdokumentation: architecture.md
+
+**mkdocs.yml falsche Position (docs/mkdocs.yml vorhanden):**
+- Inhalt von `docs/mkdocs.yml` lesen
+- `docs_dir: docs` ergänzen, falls noch nicht vorhanden
+- `mkdocs.yml` mit dem (ggf. angepassten) Inhalt im Stammverzeichnis anlegen
+- Darauf hinweisen, dass `docs/mkdocs.yml` manuell gelöscht werden muss
+  (der Agent löscht keine Dateien)
 
 **docs/architecture.md erstellen:**
 - Grundgerüst bereitstellen:
@@ -458,7 +474,7 @@ Nach Abschluss der Remediation erstellt der Agent folgendes Protokoll:
 | Datei | Zweck |
 |-------|-------|
 | docs/index.md | TechDocs Einstiegsseite |
-| docs/mkdocs.yml | MkDocs Konfiguration |
+| mkdocs.yml | MkDocs Konfiguration (im Stammverzeichnis) |
 | docs/architecture.md | Architekturdokumentation (Grundgerüst) |
 | docs/decisions/ | Ordner für ADRs |
 | ... | ... |
@@ -519,11 +535,12 @@ Nach Abschluss der Remediation erstellt der Agent folgendes Protokoll:
 | `metadata.name` aus Dateiname | Dateiname ohne `-software-catalog-info.yaml` bzw. `-software-catalog-info.yml` | Naming-Konvention |
 | `backstage.io/techdocs-ref` Annotation | Immer `dir:.` wenn docs/ vorhanden | Vorgabe aus Leitfaden |
 | Entity-Name Kleinschreibung | `.toLowerCase()` + Sonderzeichen ersetzen | Naming-Konvention |
-| Dateiname-Format | `studiengangsteckbriefe-software-catalog-info.yaml` oder `.yml` (beide gültig, keine Konvertierung) | Naming-Konvention |
+| Dateiname-Format | `<entity-name>-software-catalog-info.yaml` oder `.yml` (beide gültig, keine Konvertierung) | Naming-Konvention |
 | Entity-Typ-Präfix | Aus `kind` ableiten (Component → `component-`) | Naming-Konvention |
 | `docs/` Ordnerstruktur | Standardstruktur anlegen | Vorgabe aus Leitfaden |
 | `docs/index.md` Grundgerüst | Template mit metadata.description | Vorgabe aus Leitfaden |
-| `docs/mkdocs.yml` | Template mit site_name und nav | Vorgabe aus Leitfaden |
+| `mkdocs.yml` (im Root) | Template mit site_name, docs_dir: docs und nav im Stammverzeichnis | Vorgabe aus Leitfaden |
+| `docs/mkdocs.yml` → Root migrieren | Inhalt aus docs/mkdocs.yml lesen, docs_dir ergänzen, Root-Datei anlegen, altes File manuell löschen | Vorgabe aus Leitfaden |
 | `docs/architecture.md` Grundgerüst | arc42-artiges Template | Vorgabe aus Leitfaden |
 | `docs/decisions/` Ordner | Leerer Ordner | Vorgabe aus Leitfaden |
 | `dependsOn` Format-Korrektur | In `kind:name` Format bringen | Vorgabe aus Leitfaden |
@@ -620,6 +637,6 @@ Für Details zur Verwendung, Integration und Best Practices siehe:
 
 ---
 
-**Version:** 1.2  
-**Letzte Aktualisierung:** 16. April 2026  
+**Version:** 1.3  
+**Letzte Aktualisierung:** 15. Mai2026  
 **Maintainer:** DevOps Platform Team
