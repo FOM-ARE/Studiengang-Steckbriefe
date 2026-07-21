@@ -1,4 +1,5 @@
 """Tests fuer web/users.py."""
+
 from unittest.mock import patch
 
 _MDB = "studiengang_steckbriefe.web.users.mariadb_connector"
@@ -27,9 +28,7 @@ class TestGetUsers:
 
 class TestAddUser:
     def test_leerer_name_gibt_400(self, authenticated_client):
-        response = authenticated_client.post(
-            "/api/users", json={"username": "", "typ": "user"}
-        )
+        response = authenticated_client.post("/api/users", json={"username": "", "typ": "user"})
         assert response.status_code == 400
 
     def test_ungültiger_typ_gibt_400(self, authenticated_client):
@@ -46,9 +45,7 @@ class TestAddUser:
         assert response.status_code == 409
 
     def test_neuer_user_erstellt(self, authenticated_client):
-        with patch(f"{_MDB}.query", return_value=[]), patch(
-            f"{_MDB}.execute", return_value=1
-        ):
+        with patch(f"{_MDB}.query", return_value=[]), patch(f"{_MDB}.execute", return_value=1):
             response = authenticated_client.post(
                 "/api/users", json={"username": "new.user", "typ": "user"}
             )
@@ -75,9 +72,7 @@ class TestUpdateUser:
 
 class TestDeleteUser:
     def test_nicht_gefunden_gibt_404(self, authenticated_client):
-        with patch(f"{_MDB}.query", return_value=[]), patch(
-            f"{_MDB}.execute", return_value=0
-        ):
+        with patch(f"{_MDB}.query", return_value=[]), patch(f"{_MDB}.execute", return_value=0):
             response = authenticated_client.delete("/api/users/99")
         assert response.status_code == 404
 
@@ -87,8 +82,9 @@ class TestDeleteUser:
         assert response.status_code == 400
 
     def test_user_deaktiviert(self, authenticated_client):
-        with patch(f"{_MDB}.query", return_value=[{"Berechtigt": "anderer.user"}]), patch(
-            f"{_MDB}.execute", return_value=1
+        with (
+            patch(f"{_MDB}.query", return_value=[{"Berechtigt": "anderer.user"}]),
+            patch(f"{_MDB}.execute", return_value=1),
         ):
             response = authenticated_client.delete("/api/users/2")
         assert response.status_code == 200

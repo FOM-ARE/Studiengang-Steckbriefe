@@ -1,4 +1,5 @@
 """Tests fuer services/auth.py (EntraIdAuth + Berechtigungen)."""
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -9,9 +10,7 @@ from studiengang_steckbriefe.services.auth import (
     load_app_permissions,
 )
 
-_MSAL_CCA = (
-    "studiengang_steckbriefe.services.auth.msal.ConfidentialClientApplication"
-)
+_MSAL_CCA = "studiengang_steckbriefe.services.auth.msal.ConfidentialClientApplication"
 
 
 class TestEntraIdAuth:

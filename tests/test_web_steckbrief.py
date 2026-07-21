@@ -1,4 +1,5 @@
 """Tests fuer web/steckbrief.py (Steckbrief-Endpoints)."""
+
 from unittest.mock import patch
 
 _SVC = "studiengang_steckbriefe.web.steckbrief.svc"

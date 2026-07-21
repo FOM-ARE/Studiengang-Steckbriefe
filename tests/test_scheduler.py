@@ -1,4 +1,5 @@
-﻿"""Tests fuer services/scheduler.py."""
+"""Tests fuer services/scheduler.py."""
+
 from unittest.mock import patch
 
 import pytest

@@ -1,4 +1,5 @@
 """Tests fuer web/debug.py (Debug-Endpoints)."""
+
 from unittest.mock import patch
 
 _QDB = "studiengang_steckbriefe.web.debug.query_db"

@@ -1,4 +1,5 @@
 """Tests fuer config.py - Konfigurationsklassen und Hilfsfunktionen."""
+
 import os
 from unittest.mock import patch
 

@@ -1,4 +1,5 @@
 """Tests fuer services/keyvault.py."""
+
 from unittest.mock import MagicMock, patch
 
 import pytest

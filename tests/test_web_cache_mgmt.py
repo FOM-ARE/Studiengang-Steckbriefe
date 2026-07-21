@@ -1,4 +1,5 @@
 """Tests fuer web/cache_mgmt.py."""
+
 from unittest.mock import patch
 
 
@@ -48,8 +49,10 @@ class TestCacheClearEntry:
 
 class TestReloadConfig:
     def test_laedt_konfiguration_neu(self, authenticated_client):
-        with patch("studiengang_steckbriefe.web.cache_mgmt.reload_config") as mock_reload, \
-             patch("studiengang_steckbriefe.web.cache_mgmt.cache_clear"):
+        with (
+            patch("studiengang_steckbriefe.web.cache_mgmt.reload_config") as mock_reload,
+            patch("studiengang_steckbriefe.web.cache_mgmt.cache_clear"),
+        ):
             response = authenticated_client.post("/api/config/reload")
         assert response.status_code == 200
         mock_reload.assert_called_once()
