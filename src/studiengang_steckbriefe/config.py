@@ -37,7 +37,7 @@ class Config:
     DWH_PASSWORD = os.environ.get("DWH_PASSWORD", "")
 
     # MariaDB (Konfigurations-DB)
-    MARIADB_HOST = os.environ.get("DB_HOST", "mariadb.bcw-intern.local")
+    MARIADB_HOST = os.environ.get("DB_HOST", "mariadb-dev.bcw-intern.local")
     MARIADB_PORT = int(os.environ.get("DB_PORT", "3306"))
     MARIADB_USER = os.environ.get("DB_USER", "HochschulorgaApps")
     MARIADB_PASSWORD = os.environ.get("DB_PASSWORD", "")
