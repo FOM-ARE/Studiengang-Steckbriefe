@@ -9,7 +9,7 @@ def _azure_authority(tenant_id: str) -> str:
 
 
 def _keyvault_url() -> str:
-    """Ermittelt die Key Vault URL – explizite Env-Var hat Vorrang, Fallback ueber APP_ENV."""
+    """Ermittelt die Key Vault URL â€“ explizite Env-Var hat Vorrang, Fallback ueber APP_ENV."""
     explicit = os.environ.get("AZURE_KEYVAULT_URL", "")
     if explicit:
         return explicit
@@ -32,8 +32,8 @@ class Config:
     DWH_HOST = os.environ.get("DWH_HOST", "ms-sql-107.bcw-intern.local")
     DWH_PORT = os.environ.get("DWH_PORT", "1433")
     DWH_DATABASE = os.environ.get("DWH_DATABASE", "BCW_DWH")
-    DWH_AUTHENTICATION = os.environ.get("DWH_AUTHENTICATION", "Windows")
-    DWH_USER = os.environ.get("DWH_USER", "")
+    DWH_AUTHENTICATION = os.environ.get("DWH_AUTHENTICATION", "SQL")
+    DWH_USER = os.environ.get("DWH_USER") or "VSC_DWH_Only_Read"
     DWH_PASSWORD = os.environ.get("DWH_PASSWORD", "")
 
     # MariaDB (Konfigurations-DB)
@@ -45,7 +45,7 @@ class Config:
     MARIADB_CHARSET = os.environ.get("DB_CHARSET", "utf8mb4")
     MARIADB_SSL = os.environ.get("DB_SSL", "true").lower() == "true"
 
-    # Azure Credentials (Service Principal – fuer Key Vault UND Entra ID)
+    # Azure Credentials (Service Principal â€“ fuer Key Vault UND Entra ID)
     AZURE_CLIENT_ID = os.environ.get("AZURE_CLIENT_ID", "")
     AZURE_CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET", "")
     AZURE_TENANT_ID = os.environ.get("AZURE_TENANT_ID", "")
@@ -53,7 +53,7 @@ class Config:
     # Azure Key Vault (APP_ENV-basierter Fallback wenn AZURE_KEYVAULT_URL nicht gesetzt)
     AZURE_KEYVAULT_URL = _keyvault_url()
 
-    # Entra ID (MSAL) – gleicher Service Principal wie Key Vault
+    # Entra ID (MSAL) â€“ gleicher Service Principal wie Key Vault
     ENTRA_CLIENT_ID = os.environ.get("AZURE_CLIENT_ID", "")
     ENTRA_CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET", "")
     ENTRA_AUTHORITY = _azure_authority(os.environ.get("AZURE_TENANT_ID", ""))
