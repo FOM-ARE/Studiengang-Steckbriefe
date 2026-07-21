@@ -1,37 +1,59 @@
-"""APScheduler 4.x Integration fuer geplante Cache-Reloads."""
+"""Threading-basierter Scheduler fuer geplante Cache-Reloads.
 
-from apscheduler import Scheduler
-from apscheduler.triggers.cron import CronTrigger
+Ersetzt APScheduler (GHSA-9cfw-f3f9-7mm7 / CVE-2026-31072) durch
+Pythons eingebautes threading-Modul.
+"""
+
+import threading
+from datetime import datetime, timedelta
 
 from studiengang_steckbriefe.services.cache import cache_clear
 
-_scheduler: Scheduler | None = None
+_stop_event: threading.Event | None = None
+_scheduler_thread: threading.Thread | None = None
 
 
-def scheduled_cache_reload():
+def scheduled_cache_reload() -> None:
     """Leert den Cache (wird vom Scheduler taeglich aufgerufen)."""
     print("[Scheduler] Cache-Reload gestartet...")
     cache_clear()
     print("[Scheduler] Cache geleert.")
 
 
-def init_scheduler(app):
-    """Initialisiert den APScheduler 4.x mit einem taeglichen Cache-Reload-Job."""
-    global _scheduler
+def _run_scheduler(stop_event: threading.Event) -> None:
+    """Laeuft im Hintergrund-Thread und fuehrt den Cache-Reload taeglich um 05:30 aus."""
+    while not stop_event.is_set():
+        now = datetime.now()
+        next_run = now.replace(hour=5, minute=30, second=0, microsecond=0)
+        if next_run <= now:
+            next_run += timedelta(days=1)
+        wait_seconds = (next_run - datetime.now()).total_seconds()
+        stop_event.wait(timeout=wait_seconds)
+        if not stop_event.is_set():
+            try:
+                scheduled_cache_reload()
+            except Exception as exc:
+                print(f"[Scheduler] Fehler beim Cache-Reload: {exc}")
 
-    _scheduler = Scheduler()
-    _scheduler.add_schedule(
-        scheduled_cache_reload,
-        CronTrigger(hour=5, minute=30),
-        id="daily_cache_reload",
+
+def init_scheduler(app) -> None:
+    """Startet den Hintergrund-Thread fuer taegliche Cache-Reloads um 05:30."""
+    global _stop_event, _scheduler_thread
+    _stop_event = threading.Event()
+    _scheduler_thread = threading.Thread(
+        target=_run_scheduler,
+        args=(_stop_event,),
+        daemon=True,
+        name="daily-cache-reload",
     )
-    _scheduler.start_in_background()
+    _scheduler_thread.start()
     app.logger.info("Scheduler gestartet (Cache-Reload taeglich um 05:30)")
 
 
-def shutdown_scheduler():
+def shutdown_scheduler() -> None:
     """Stoppt den Scheduler sauber."""
-    global _scheduler
-    if _scheduler:
-        _scheduler.stop()
-        _scheduler = None
+    global _stop_event, _scheduler_thread
+    if _stop_event:
+        _stop_event.set()
+        _stop_event = None
+    _scheduler_thread = None
