@@ -710,7 +710,7 @@
     <header>
         <div class="header-content">
             <div class="header-logo" style="flex-shrink: 0;">
-                <img src="assets/images/FOM-Logo-negativ.png" alt="FOM Hochschule Logo" style="height: 45px; width: auto; object-fit: contain;">
+                <img src="/static/images/FOM-Logo-negativ.png" alt="FOM Hochschule Logo" style="height: 45px; width: auto; object-fit: contain;">
             </div>
             <div class="header-text" style="flex: 1;">
                 <h1>📚 Studiengang-Steckbriefe</h1>
@@ -1070,8 +1070,8 @@
 
         async function loadAdditionalData(programme) {
             const pk = programme.kurzname;
-            const isBachelor = !pk.startsWith('M');
-            const isMaster = pk.startsWith('M');
+            const isBachelor = !programme.abschluss.toLowerCase().includes('master');
+            const isMaster = programme.abschluss.toLowerCase().includes('master');
 
             const rerender = () => {
                 programme._computed = null;
@@ -1114,12 +1114,19 @@
                     .then(r => r.json())
                     .then(res => {
                         if (res && res.success) {
-                            programme[key] = res.data; // null = keine Daten, object = Daten vorhanden
+                            programme[key] = res.data;
                             console.log(`[API] ${pk}/${ep} ${res.data ? 'geladen' : 'keine Daten'}`);
-                            rerender();
+                        } else {
+                            programme[key] = null;
+                            console.warn(`[API] ${pk}/${ep} kein Erfolg:`, res);
                         }
+                        rerender();
                     })
-                    .catch(err => console.warn(`[API] ${pk}/${ep} fehlgeschlagen:`, err.message));
+                    .catch(err => {
+                        programme[key] = null;
+                        rerender();
+                        console.warn(`[API] ${pk}/${ep} fehlgeschlagen:`, err.message);
+                    });
             });
 
             updateDatenstand();
@@ -1396,9 +1403,9 @@
                 { id: 'stammdaten', label: 'Stammdaten', icon: '👤' },
                 { id: 'studienerfolg', label: 'Studienabschluss', icon: '📊' }
             ];
-            if (programme.kurzname.startsWith('B')) {
+            if (!programme.abschluss.toLowerCase().includes('master')) {
                 tabs.push({ id: 'uebergang', label: 'Übergang Bachelor→Master', icon: '🎓' });
-            } else if (programme.kurzname.startsWith('M')) {
+            } else if (programme.abschluss.toLowerCase().includes('master')) {
                 tabs.push({ id: 'herkunft', label: 'Herkunft Master von Bachelor', icon: '🎓' });
             }
             tabs.push({ id: 'zuzahler', label: 'Zuzahler', icon: '💰' });
@@ -1495,7 +1502,10 @@
         }
 
         function renderUETable(rahmendaten) {
-            const rows = rahmendaten.ueBySemester || [];
+            const ueBySem = rahmendaten.ueBySemester || {};
+            const rows = Object.entries(ueBySem)
+                .map(([sem, data]) => ({ semester: parseInt(sem), praxis: data.praxis || 0, virtuell: data.virtuell || 0, folgt: data.folgt || 0 }))
+                .sort((a, b) => a.semester - b.semester);
             const ue = rahmendaten.ue || {praxis: 0, virtuell: 0, folgt: 0};
             if (!rows.length && !ue.praxis && !ue.virtuell && !ue.folgt) {
                 return '<p style="color: var(--fom-gray-500); font-size: 13px;">Keine UE-Daten vorhanden.</p>';

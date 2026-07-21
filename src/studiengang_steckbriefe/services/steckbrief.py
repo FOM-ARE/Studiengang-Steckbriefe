@@ -1402,7 +1402,50 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
         mit_anrechnung = int(s.get("MitAnrechnung", 0))
         anteil_pct = round(mit_anrechnung / total * 100, 1)
 
-        # 4) Top Module
+        # 4) Kategorisierung: hochschulisch / beruflich / beides / keine
+        hs_la = [
+            r["match_wert"]
+            for r in config_db.ANRECHNUNG_REGELN.get("LEISTUNGSART", [])
+            if r["kategorie"] == "hochschulisch"
+        ]
+        ber_la = [
+            r["match_wert"]
+            for r in config_db.ANRECHNUNG_REGELN.get("LEISTUNGSART", [])
+            if r["kategorie"] == "beruflich"
+        ]
+        hs_sql = ",".join(f"'{v}'" for v in hs_la) if hs_la else "'__NONE__'"
+        ber_sql = ",".join(f"'{v}'" for v in ber_la) if ber_la else "'__NONE__'"
+        cursor.execute(f"""
+            SELECT
+                SUM(CASE WHEN is_hs = 1 AND is_ber = 0 THEN 1 ELSE 0 END) AS hochschulisch,
+                SUM(CASE WHEN is_hs = 0 AND is_ber = 1 THEN 1 ELSE 0 END) AS beruflich,
+                SUM(CASE WHEN is_hs = 1 AND is_ber = 1 THEN 1 ELSE 0 END) AS hs_ber,
+                SUM(CASE WHEN is_hs = 0 AND is_ber = 0 THEN 1 ELSE 0 END) AS keine
+            FROM (
+                SELECT g.StudienEintragID,
+                       MAX(CASE WHEN d.LeistungsArt IN ({hs_sql}) THEN 1 ELSE 0 END) AS is_hs,
+                       MAX(CASE WHEN d.LeistungsArt IN ({ber_sql}) THEN 1 ELSE 0 END) AS is_ber
+                FROM #gs_anr g
+                LEFT JOIN #anr_data d ON d.StudienEintragID = g.StudienEintragID
+                GROUP BY g.StudienEintragID
+            ) kat
+        """)
+        kat_row = cursor.fetchone()
+        kat = (
+            dict(zip([c[0] for c in cursor.description], kat_row, strict=False))
+            if kat_row
+            else {"hochschulisch": 0, "beruflich": 0, "hs_ber": 0, "keine": 0}
+        )
+        hochschulisch_abs = int(kat.get("hochschulisch") or 0)
+        beruflich_abs = int(kat.get("beruflich") or 0)
+        hs_ber_abs = int(kat.get("hs_ber") or 0)
+        keine_abs = int(kat.get("keine") or 0)
+        hochschulisch_pct = round(hochschulisch_abs / total * 100, 1)
+        beruflich_pct = round(beruflich_abs / total * 100, 1)
+        hs_ber_pct = round(hs_ber_abs / total * 100, 1)
+        keine_pct = round(keine_abs / total * 100, 1)
+
+        # 5) Top Module
         cursor.execute("""
             SELECT TOP 10 MIN(d.Fach) AS Name, COUNT(DISTINCT d.StudienEintragID) AS Cnt
             FROM #anr_data d
@@ -1414,7 +1457,7 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
             for row in cursor.fetchall()
         ]
 
-        # 5) Offene Hochschule
+        # 6) Offene Hochschule
         cursor.execute(f"""
             SELECT COUNT(DISTINCT d.StudienEintragID) AS Cnt
             FROM #anr_data d
@@ -1443,6 +1486,14 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
         "total_population": total,
         "mit_anrechnung": mit_anrechnung,
         "anteil_pct": anteil_pct,
+        "hochschulisch_abs": hochschulisch_abs,
+        "beruflich_abs": beruflich_abs,
+        "hs_ber_abs": hs_ber_abs,
+        "keine_abs": keine_abs,
+        "hochschulisch_pct": hochschulisch_pct,
+        "beruflich_pct": beruflich_pct,
+        "hs_ber_pct": hs_ber_pct,
+        "keine_pct": keine_pct,
         "offene_hochschule_pct": offene_hs_pct,
         "top_module": [{"name": m["Name"], "anzahl": int(m["Cnt"])} for m in top_module],
     }

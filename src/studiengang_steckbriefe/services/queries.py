@@ -51,7 +51,6 @@ def _build_sql_queries():
     _excl = config_db.EXCLUDED_HSZ_SQL
     _pk_case_s = config_db._build_pk_case_for_s()
     _jahre_trends = config_db.get_param_int("trends", "jahre_zurueck", 4)
-    _ausrichtung_excl = config_db.get_filter_sql("AUSRICHTUNG_EXCLUDE")
     _hsb_excl = config_db.HSB_EXCLUDE_SQL
 
     SQL_STUDIERENDE_ZEITREIHE = f"""
@@ -77,7 +76,7 @@ def _build_sql_queries():
         AS DECIMAL(10,1)) AS Beginner_FOM_Avg
     FROM BCW_DWH.dwh.C_Studierendenzahlen s
     WHERE s.Institut = 'FOM'
-      AND ISNULL(s.Ausrichtung, '') NOT IN ({_ausrichtung_excl})
+      AND s.Ausrichtung = 'national'
       AND s.Hochschulzentrum NOT IN ({_excl})
       AND CAST(LEFT(s.Semesterkuerzel, 4) AS INT) >= YEAR(GETDATE()) - {_jahre_trends}
       AND s.Semesterkuerzel <= CONCAT(YEAR(GETDATE()), CASE WHEN MONTH(GETDATE()) >= 9 THEN '-WS' ELSE '-SS' END)
@@ -97,7 +96,7 @@ def _build_sql_queries():
     FROM BCW_DWH.dwh.C_Studierendenzahlen s
     WHERE s.Institut = 'FOM'
       AND s.Produktkuerzel = ?
-      AND ISNULL(s.Ausrichtung, '') NOT IN ({_ausrichtung_excl})
+      AND s.Ausrichtung = 'national'
       AND s.Hochschulzentrum NOT IN ({_excl})
       AND CAST(LEFT(s.Semesterkuerzel, 4) AS INT) >= YEAR(GETDATE()) - {_jahre_trends}
       AND s.Semesterkuerzel <= CONCAT(YEAR(GETDATE()), CASE WHEN MONTH(GETDATE()) >= 9 THEN '-WS' ELSE '-SS' END)
@@ -123,7 +122,7 @@ def _build_sql_queries():
         ), 0) AS DECIMAL(10,1)) AS AvgBeginner
     FROM BCW_DWH.dwh.C_Studierendenzahlen s
     WHERE s.Institut = 'FOM'
-      AND ISNULL(s.Ausrichtung, '') NOT IN ({_ausrichtung_excl})
+      AND s.Ausrichtung = 'national'
       AND s.Hochschulzentrum NOT IN ({_excl})
       AND CAST(LEFT(s.Semesterkuerzel, 4) AS INT) >= YEAR(GETDATE()) - {_jahre_trends}
       AND s.Semesterkuerzel <= CONCAT(YEAR(GETDATE()), CASE WHEN MONTH(GETDATE()) >= 9 THEN '-WS' ELSE '-SS' END)
@@ -136,7 +135,7 @@ def _build_sql_queries():
         FROM BCW_DWH.dwh.C_Studierendenzahlen s
         WHERE s.Institut = 'FOM'
           AND s.Produktkuerzel = ?
-          AND ISNULL(s.Ausrichtung, '') NOT IN ({_ausrichtung_excl})
+          AND s.Ausrichtung = 'national'
           AND s.Gesamtstudierende = 1
           AND CAST(LEFT(s.Semesterkuerzel, 4) AS INT) >= YEAR(GETDATE()) - 3
           AND s.Hochschulzentrum NOT IN ({_excl})
@@ -167,7 +166,7 @@ def _build_sql_queries():
               AND LehrgangGueltig = 1
         ) l ON l.Produktkuerzel = s.Produktkuerzel
         WHERE s.Institut = 'FOM'
-          AND ISNULL(s.Ausrichtung, '') NOT IN ({_ausrichtung_excl})
+          AND s.Ausrichtung = 'national'
           AND ISNULL(s.HochschulbereichKuerzel, '') NOT IN ({_hsb_excl}, '')
           AND s.Hochschulzentrum NOT IN ({_excl})
           AND s.Produktkuerzel LIKE '[BM]%'
@@ -183,7 +182,7 @@ def _build_sql_queries():
         SUM(s.Gesamtstudierende) AS Gesamtstudierende
     FROM BCW_DWH.dwh.C_Studierendenzahlen s
     WHERE s.Institut = 'FOM'
-      AND ISNULL(s.Ausrichtung, '') NOT IN ({_ausrichtung_excl})
+      AND s.Ausrichtung = 'national'
       AND s.Hochschulzentrum NOT IN ({_excl})
       AND s.Semesterkuerzel = CONCAT(YEAR(GETDATE()), CASE WHEN MONTH(GETDATE()) >= 9 THEN '-WS' ELSE '-SS' END)
     GROUP BY s.Produktkuerzel
@@ -982,7 +981,6 @@ def _patch_remaining_queries():
 
     # Config-Werte laden
     _excl = config_db.EXCLUDED_HSZ_SQL
-    _ausrichtung_excl = config_db.get_filter_sql("AUSRICHTUNG_EXCLUDE")
     _offene_hs = config_db.OFFENE_HOCHSCHULE_SQL
     _sg_stamm_1 = config_db.get_param("stammdaten", "statusgruppe", "Beginner mit UV")
     _sg_stamm_2 = config_db.get_param("stammdaten", "statusgruppe_2", "Quereinsteiger mit UV")
@@ -1024,7 +1022,7 @@ def _patch_remaining_queries():
         # Ausrichtung OBS
         (
             "ISNULL(s.Ausrichtung, '') <> 'OBS'",
-            f"ISNULL(s.Ausrichtung, '') NOT IN ({_ausrichtung_excl})",
+            "s.Ausrichtung = 'national'",
         ),
         # StatusGruppe Stammdaten (Beginner + Quereinsteiger)
         (
