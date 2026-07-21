@@ -1403,19 +1403,8 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
         anteil_pct = round(mit_anrechnung / total * 100, 1)
 
         # 4) Kategorisierung: hochschulisch / beruflich / beides / keine
-        hs_la = [
-            r["match_wert"]
-            for r in config_db.ANRECHNUNG_REGELN.get("LEISTUNGSART", [])
-            if r["kategorie"] == "hochschulisch"
-        ]
-        ber_la = [
-            r["match_wert"]
-            for r in config_db.ANRECHNUNG_REGELN.get("LEISTUNGSART", [])
-            if r["kategorie"] == "beruflich"
-        ]
-        hs_sql = ",".join(f"'{v}'" for v in hs_la) if hs_la else "'__NONE__'"
-        ber_sql = ",".join(f"'{v}'" for v in ber_la) if ber_la else "'__NONE__'"
-        cursor.execute(f"""
+        # Klassifizierung per LIKE-Pattern direkt auf LeistungsArt (kein MariaDB-Config noetig)
+        cursor.execute("""
             SELECT
                 SUM(CASE WHEN is_hs = 1 AND is_ber = 0 THEN 1 ELSE 0 END) AS hochschulisch,
                 SUM(CASE WHEN is_hs = 0 AND is_ber = 1 THEN 1 ELSE 0 END) AS beruflich,
@@ -1423,8 +1412,8 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
                 SUM(CASE WHEN is_hs = 0 AND is_ber = 0 THEN 1 ELSE 0 END) AS keine
             FROM (
                 SELECT g.StudienEintragID,
-                       MAX(CASE WHEN d.LeistungsArt IN ({hs_sql}) THEN 1 ELSE 0 END) AS is_hs,
-                       MAX(CASE WHEN d.LeistungsArt IN ({ber_sql}) THEN 1 ELSE 0 END) AS is_ber
+                       MAX(CASE WHEN LOWER(d.LeistungsArt) LIKE '%hochschul%' THEN 1 ELSE 0 END) AS is_hs,
+                       MAX(CASE WHEN LOWER(d.LeistungsArt) LIKE '%beruflich%' THEN 1 ELSE 0 END) AS is_ber
                 FROM #gs_anr g
                 LEFT JOIN #anr_data d ON d.StudienEintragID = g.StudienEintragID
                 GROUP BY g.StudienEintragID
