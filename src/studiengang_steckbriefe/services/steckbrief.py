@@ -1342,14 +1342,16 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
     try:
         cursor = conn.cursor()
 
-        # 1) Population: Studierende mit Anrechnung im Zeitraum
+        # 1) Population: Alle Beginner/Quereinsteiger im Zeitraum inkl. AnrechnungsGrund
+        #    Quelle: se.AnrechnungsGrund auf StudienEintraege (keine separate Anrechnungen-Tabelle noetig)
         try:
             cursor.execute("DROP TABLE IF EXISTS #gs_anr")
         except Exception:
             pass
         cursor.execute(
             f"""
-            SELECT DISTINCT se.PersonenFID, se.StudienEintragID, l.Hochschulzentrum AS HSZ
+            SELECT DISTINCT se.PersonenFID, se.StudienEintragID, l.Hochschulzentrum AS HSZ,
+                   se.AnrechnungsGrund
             INTO #gs_anr
             FROM BCW_DWH.dwh.StudierendenStatusJeSemester sz
                 INNER JOIN BCW_DWH.dwh.StudienEintraege se ON se.StudienEintragID = sz.StudienEintragFID
@@ -1375,90 +1377,46 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
             variants,
         )
 
-        # 2) Anrechnungs-Daten
-        try:
-            cursor.execute("DROP TABLE IF EXISTS #anr_data")
-        except Exception:
-            pass
-        cursor.execute("""
-            SELECT g.StudienEintragID, g.PersonenFID, g.HSZ,
-                   a.Fach, a.LeistungsArt, a.AnrechnungsGrund
-            INTO #anr_data
-            FROM #gs_anr g
-            INNER JOIN BCW_DWH.dwh.Anrechnungen a ON a.StudienEintragFID = g.StudienEintragID
-            WHERE a.AnrechnungsStatus = 'positiv'
-        """)
-
-        # 3) Anteil berechnen
-        cursor.execute("""
+        # 2) Kennzahlen direkt aus #gs_anr berechnen
+        cursor.execute(f"""
             SELECT
-                COUNT(DISTINCT g.StudienEintragID) AS Total,
-                COUNT(DISTINCT CASE WHEN d.StudienEintragID IS NOT NULL THEN g.StudienEintragID END) AS MitAnrechnung
-            FROM #gs_anr g
-            LEFT JOIN #anr_data d ON d.StudienEintragID = g.StudienEintragID
+                COUNT(DISTINCT StudienEintragID) AS Total,
+                -- mit Anrechnung = AnrechnungsGrund vorhanden
+                COUNT(DISTINCT CASE WHEN AnrechnungsGrund IS NOT NULL
+                                         AND LTRIM(RTRIM(AnrechnungsGrund)) <> ''
+                                    THEN StudienEintragID END) AS MitAnrechnung,
+                -- berufliche Qualifikation = Offene Hochschule (berufliche Vorkenntnisse)
+                COUNT(DISTINCT CASE WHEN AnrechnungsGrund IN ({config_db.OFFENE_HOCHSCHULE_SQL})
+                                    THEN StudienEintragID END) AS Beruflich,
+                -- hochschulische Qualifikation = vorhanden, aber NICHT beruflich
+                COUNT(DISTINCT CASE WHEN AnrechnungsGrund IS NOT NULL
+                                         AND LTRIM(RTRIM(AnrechnungsGrund)) <> ''
+                                         AND AnrechnungsGrund NOT IN ({config_db.OFFENE_HOCHSCHULE_SQL})
+                                    THEN StudienEintragID END) AS Hochschulisch,
+                -- keine Anrechnung
+                COUNT(DISTINCT CASE WHEN AnrechnungsGrund IS NULL
+                                         OR LTRIM(RTRIM(AnrechnungsGrund)) = ''
+                                    THEN StudienEintragID END) AS Keine
+            FROM #gs_anr
         """)
         s = dict(zip([c[0] for c in cursor.description], cursor.fetchone(), strict=False))
-        total = max(int(s.get("Total", 0)), 1)
-        mit_anrechnung = int(s.get("MitAnrechnung", 0))
+        total = max(int(s.get("Total", 0) or 0), 1)
+        mit_anrechnung = int(s.get("MitAnrechnung", 0) or 0)
         anteil_pct = round(mit_anrechnung / total * 100, 1)
-
-        # 4) Kategorisierung: hochschulisch / beruflich / beides / keine
-        # Klassifizierung per LIKE-Pattern direkt auf LeistungsArt (kein MariaDB-Config noetig)
-        cursor.execute("""
-            SELECT
-                SUM(CASE WHEN is_hs = 1 AND is_ber = 0 THEN 1 ELSE 0 END) AS hochschulisch,
-                SUM(CASE WHEN is_hs = 0 AND is_ber = 1 THEN 1 ELSE 0 END) AS beruflich,
-                SUM(CASE WHEN is_hs = 1 AND is_ber = 1 THEN 1 ELSE 0 END) AS hs_ber,
-                SUM(CASE WHEN is_hs = 0 AND is_ber = 0 THEN 1 ELSE 0 END) AS keine
-            FROM (
-                SELECT g.StudienEintragID,
-                       MAX(CASE WHEN LOWER(d.LeistungsArt) LIKE '%hochschul%' THEN 1 ELSE 0 END) AS is_hs,
-                       MAX(CASE WHEN LOWER(d.LeistungsArt) LIKE '%beruflich%' THEN 1 ELSE 0 END) AS is_ber
-                FROM #gs_anr g
-                LEFT JOIN #anr_data d ON d.StudienEintragID = g.StudienEintragID
-                GROUP BY g.StudienEintragID
-            ) kat
-        """)
-        kat_row = cursor.fetchone()
-        kat = (
-            dict(zip([c[0] for c in cursor.description], kat_row, strict=False))
-            if kat_row
-            else {"hochschulisch": 0, "beruflich": 0, "hs_ber": 0, "keine": 0}
-        )
-        hochschulisch_abs = int(kat.get("hochschulisch") or 0)
-        beruflich_abs = int(kat.get("beruflich") or 0)
-        hs_ber_abs = int(kat.get("hs_ber") or 0)
-        keine_abs = int(kat.get("keine") or 0)
+        beruflich_abs = int(s.get("Beruflich", 0) or 0)
+        hochschulisch_abs = int(s.get("Hochschulisch", 0) or 0)
+        hs_ber_abs = 0  # AnrechnungsGrund ist einwertig, hs+ber gleichzeitig nicht moeglich
+        keine_abs = int(s.get("Keine", 0) or 0)
         hochschulisch_pct = round(hochschulisch_abs / total * 100, 1)
         beruflich_pct = round(beruflich_abs / total * 100, 1)
-        hs_ber_pct = round(hs_ber_abs / total * 100, 1)
+        hs_ber_pct = 0.0
         keine_pct = round(keine_abs / total * 100, 1)
-
-        # 5) Top Module
-        cursor.execute("""
-            SELECT TOP 10 MIN(d.Fach) AS Name, COUNT(DISTINCT d.StudienEintragID) AS Cnt
-            FROM #anr_data d
-            GROUP BY d.Fach
-            ORDER BY COUNT(DISTINCT d.StudienEintragID) DESC
-        """)
-        top_module = [
-            dict(zip([c[0] for c in cursor.description], row, strict=False))
-            for row in cursor.fetchall()
-        ]
-
-        # 6) Offene Hochschule
-        cursor.execute(f"""
-            SELECT COUNT(DISTINCT d.StudienEintragID) AS Cnt
-            FROM #anr_data d
-            WHERE d.AnrechnungsGrund IN ({config_db.OFFENE_HOCHSCHULE_SQL})
-        """)
-        oh_row = cursor.fetchone()
-        offene_hs_cnt = int(oh_row[0]) if oh_row else 0
-        offene_hs_pct = round(offene_hs_cnt / total * 100, 1)
+        offene_hs_pct = beruflich_pct  # Offene Hochschule = berufliche Qualifikation
+        top_module: list = []  # Keine Einzel-Anrechnungszeilen verfuegbar
 
         # Aufraeumen
         try:
-            cursor.execute("DROP TABLE IF EXISTS #gs_anr; DROP TABLE IF EXISTS #anr_data")
+            cursor.execute("DROP TABLE IF EXISTS #gs_anr")
         except Exception:
             pass
 
