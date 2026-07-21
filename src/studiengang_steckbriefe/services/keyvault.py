@@ -1,4 +1,4 @@
-"""Azure Key Vault Integration - laedt Secrets zur Laufzeit."""
+﻿"""Azure Key Vault Integration - laedt Secrets zur Laufzeit."""
 
 from azure.identity import ClientSecretCredential, DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
@@ -44,7 +44,13 @@ def load_keyvault_secrets(app):
             )
 
         # MariaDB Passwort
-        app.config["MARIADB_PASSWORD"] = client.get_secret("mariadb-password").value
+        try:
+            app.config["MARIADB_PASSWORD"] = client.get_secret("mariadb-password").value
+        except Exception:
+            app.logger.warning(
+                "Secret 'mariadb-password' nicht im Key Vault gefunden "
+                "- nutze DB_PASSWORD-Umgebungsvariable"
+            )
 
         # DWH Passwort (Secret heisst 'dwh-user' im Key Vault)
         try:
