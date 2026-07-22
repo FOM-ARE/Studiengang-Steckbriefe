@@ -44,6 +44,7 @@ class Config:
     MARIADB_DATABASE = os.environ.get("DB_NAME", "HochschulorgaApps")
     MARIADB_CHARSET = os.environ.get("DB_CHARSET", "utf8mb4")
     MARIADB_SSL = os.environ.get("DB_SSL", "true").lower() == "true"
+    MARIADB_SSL_CA = os.environ.get("DB_SSL_CA", "")  # Pfad zum CA-Cert (leer = Self-Signed)
 
     # Azure Credentials (Service Principal â€“ fuer Key Vault UND Entra ID)
     AZURE_CLIENT_ID = os.environ.get("AZURE_CLIENT_ID", "")

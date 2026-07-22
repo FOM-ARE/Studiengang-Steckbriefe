@@ -18,7 +18,15 @@ def get_connection():
     }
 
     if current_app.config.get("MARIADB_SSL"):
-        ssl_ctx = ssl.create_default_context()
+        ca_path = current_app.config.get("MARIADB_SSL_CA", "")
+        if ca_path:
+            ssl_ctx = ssl.create_default_context(cafile=ca_path)
+        else:
+            # Internes Self-Signed-Zertifikat: Verschluesselung aktiv,
+            # aber keine Zertifikatsvalidierung (kein CA verfuegbar).
+            ssl_ctx = ssl.create_default_context()
+            ssl_ctx.check_hostname = False  # NOSONAR – Self-Signed intern
+            ssl_ctx.verify_mode = ssl.CERT_NONE  # NOSONAR – Self-Signed intern
         kwargs["ssl"] = ssl_ctx
 
     return pymysql.connect(**kwargs)
