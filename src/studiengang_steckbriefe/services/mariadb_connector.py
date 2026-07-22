@@ -19,8 +19,6 @@ def get_connection():
 
     if current_app.config.get("MARIADB_SSL"):
         ssl_ctx = ssl.create_default_context()
-        ssl_ctx.check_hostname = False
-        ssl_ctx.verify_mode = ssl.CERT_NONE
         kwargs["ssl"] = ssl_ctx
 
     return pymysql.connect(**kwargs)
