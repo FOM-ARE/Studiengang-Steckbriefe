@@ -24,7 +24,7 @@ HSB_ORDER: dict[str, int] = {}
 
 # Excluded Hochschulzentren
 EXCLUDED_HSZ: list[str] = []
-EXCLUDED_HSZ_SQL: str = ""
+EXCLUDED_HSZ_SQL: str = "'__NONE__'"
 
 # Anrechnung-Regeln
 ANRECHNUNG_REGELN: dict[str, list[dict]] = {}
@@ -40,11 +40,11 @@ PK_CASE_SQL: str = ""
 
 # Offene-Hochschule-Gruende
 OFFENE_HOCHSCHULE_GRUENDE: list[str] = []
-OFFENE_HOCHSCHULE_SQL: str = ""
+OFFENE_HOCHSCHULE_SQL: str = "'__NONE__'"
 
 # HSB-Exclude-Kuerzel
 HSB_EXCLUDE_KUERZEL: list[str] = []
-HSB_EXCLUDE_SQL: str = ""
+HSB_EXCLUDE_SQL: str = "'__NONE__'"
 
 
 def _build_pk_case_sql(alias: str = "l") -> str:

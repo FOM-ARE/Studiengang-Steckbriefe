@@ -2612,7 +2612,17 @@
             // Herkunftstabelle
             const kTh = k.map(s => `<th style="text-align: center; background: var(--fom-primary); color: white; padding: 6px 8px; font-size: 11px;">${s}</th>`).join('');
             const fmtCell = (v) => v === null ? `<td style="text-align: center; padding: 6px 8px; font-size: 11px;"></td>` : `<td style="text-align: center; padding: 6px 8px; font-size: 11px;">${v.toFixed(1).replace('.', ',')}%</td>`;
-            const h = u.herkunft;
+            const h = u.herkunft || {
+                kein_master: k.map(() => null),
+                am_jetzigen_hsz: k.map(() => null),
+                am_jetzigen_ueberschneidung: k.map(() => null),
+                am_jetzigen_folgesemester: k.map(() => null),
+                am_jetzigen_pause: k.map(() => null),
+                an_anderem_hsz: k.map(() => null),
+                an_anderem_ueberschneidung: k.map(() => null),
+                an_anderem_folgesemester: k.map(() => null),
+                an_anderem_pause: k.map(() => null),
+            };
 
             // Master-Studiengänge Tabelle
             const mTh = k.map(s => `<th style="text-align: center; background: var(--fom-primary); color: white; padding: 6px 8px; font-size: 11px;">${s}</th>`).join('');

@@ -1,5 +1,7 @@
 """Cache-Management-Blueprint: Admin-Endpoints fuer Cache-Steuerung."""
 
+import traceback
+
 from flask import Blueprint, jsonify
 
 from studiengang_steckbriefe.services.cache import (
@@ -35,6 +37,56 @@ def clear_entry(produktkuerzel: str, endpoint: str):
     cache_key = f"{endpoint}_{produktkuerzel}"
     cache_delete(cache_key)
     return jsonify(success=True, message=f"Cache-Eintrag '{cache_key}' geloescht")
+
+
+@cache_mgmt_bp.route("/api/cache/preload", methods=["POST"])
+@admin_required
+def preload():
+    """Waermt den Cache fuer alle aktiven Studiengaenge vor."""
+    from studiengang_steckbriefe.services import steckbrief as svc
+
+    _ENDPOINTS = [
+        svc.get_trends,
+        svc.get_stammdaten,
+        svc.get_studienerfolg,
+        svc.get_uebergang,
+        svc.get_herkunft,
+        svc.get_zuzahler,
+        svc.get_vertiefungsrichtungen,
+        svc.get_rahmendaten,
+        svc.get_aktive_hszen,
+        svc.get_anrechnungen,
+    ]
+
+    try:
+        hsbs = svc.get_studiengaenge()
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify(success=False, error=str(e)), 500
+
+    all_pks: set[str] = set()
+    for hsb in hsbs:
+        for sg in hsb.get("programmes", []):
+            pk = sg.get("produktkuerzel")
+            if pk:
+                all_pks.add(pk)
+
+    errors: list[str] = []
+    endpoints_loaded = 0
+    for pk in sorted(all_pks):
+        for fn in _ENDPOINTS:
+            try:
+                fn(pk)
+                endpoints_loaded += 1
+            except Exception as e:
+                errors.append(f"{fn.__name__}({pk}): {e}")
+
+    return jsonify(
+        success=True,
+        studiengaenge=len(all_pks),
+        endpoints_loaded=endpoints_loaded,
+        errors=errors,
+    )
 
 
 @cache_mgmt_bp.route("/api/config/reload", methods=["POST"])
