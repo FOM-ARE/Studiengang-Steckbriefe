@@ -56,9 +56,7 @@ class EntraIdAuth:
 # ═══════════════════════════════════════
 
 
-def get_role_from_token_claims(
-    claims: dict, group_mapping: dict[str, str]
-) -> str | None:
+def get_role_from_token_claims(claims: dict, group_mapping: dict[str, str]) -> str | None:
     """Bestimmt die Rolle aus dem groups-Claim im ID-Token.
 
     Die Gruppen-Object-IDs werden direkt im signierten ID-Token von Microsoft
