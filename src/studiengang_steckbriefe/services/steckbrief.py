@@ -784,9 +784,7 @@ def _dedup_uebergang(rows: list[dict]) -> list[dict]:
     return result
 
 
-def _compute_uebergang_stats(
-    rows: list[dict], kohorten_set: list[str]
-) -> tuple[dict, dict]:
+def _compute_uebergang_stats(rows: list[dict], kohorten_set: list[str]) -> tuple[dict, dict]:
     """Berechnet detaillierte Uebergangs-Statistiken pro Kohorte."""
     per_kohorte: dict = {}
     master_sg_per_kohorte: dict = {}
@@ -892,9 +890,7 @@ def get_uebergang(produktkuerzel: str) -> dict:
     def sum_pct_per_kohorte(*kats: str) -> list[float]:
         return [
             round(
-                sum(per_kohorte[k]["counts"][kat] for kat in kats)
-                / per_kohorte[k]["total"]
-                * 100,
+                sum(per_kohorte[k]["counts"][kat] for kat in kats) / per_kohorte[k]["total"] * 100,
                 1,
             )
             for k in kohorten_set
@@ -927,9 +923,7 @@ def get_uebergang(produktkuerzel: str) -> dict:
             "name": sg,
             "werte": [
                 round(
-                    master_sg_per_kohorte.get(k, {}).get(sg, 0)
-                    / per_kohorte[k]["total"]
-                    * 100,
+                    master_sg_per_kohorte.get(k, {}).get(sg, 0) / per_kohorte[k]["total"] * 100,
                     1,
                 )
                 for k in kohorten_set
@@ -942,9 +936,7 @@ def get_uebergang(produktkuerzel: str) -> dict:
     total_all = sum(d["total"] for d in per_kohorte.values()) or 1
 
     def avg_pct(kat: str) -> float:
-        return round(
-            sum(per_kohorte[k]["counts"][kat] for k in kohorten_set) / total_all * 100, 1
-        )
+        return round(sum(per_kohorte[k]["counts"][kat] for k in kohorten_set) / total_all * 100, 1)
 
     uebersicht_sg = [
         avg_pct("kein_master"),
