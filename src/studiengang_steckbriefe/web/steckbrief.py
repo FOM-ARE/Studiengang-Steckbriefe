@@ -58,7 +58,8 @@ def anrechnungen(produktkuerzel: str):
         return jsonify(success=True, data=data)
     except Exception as e:
         traceback.print_exc()
-        return jsonify(success=False, error=str(e)), 500
+        tb = traceback.format_exc()
+        return jsonify(success=False, error=str(e), traceback=tb), 500
 
 
 @steckbrief_bp.route("/api/steckbrief/<produktkuerzel>/uebergang")
@@ -82,7 +83,8 @@ def herkunft(produktkuerzel: str):
         return jsonify(success=True, data=data)
     except Exception as e:
         traceback.print_exc()
-        return jsonify(success=False, error=str(e)), 500
+        tb = traceback.format_exc()
+        return jsonify(success=False, error=str(e), traceback=tb), 500
 
 
 @steckbrief_bp.route("/api/steckbrief/<produktkuerzel>/zuzahler")

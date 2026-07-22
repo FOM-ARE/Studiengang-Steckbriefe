@@ -668,7 +668,61 @@ SQL_HERKUNFT = """
     )
     SELECT
         mb.PersonenFID, mb.M_PK, mb.M_HSZ_K, mb.M_HSZ, mb.M_Kohorte, mb.M_ImDatum,
-        ba.B_PK, ba.B_SG, ba.B_Familie, ba.B_HSZ_K, ba.B_HSZ, ba.B_ExDatum
+        ba.B_PK, ba.B_SG, ba.B_Familie, ba.B_HSZ_K, ba.B_HSZ, ba.B_ExDatum,
+        CASE WHEN mb.M_HSZ_K = ba.B_HSZ_K THEN 1 ELSE 0 END AS GleicherHSZ
+    FROM master_beginner mb
+        LEFT JOIN bachelor_abschluss ba ON ba.PersonenFID = mb.PersonenFID
+            AND ba.B_ImDatum < mb.M_ImDatum
+"""
+
+SQL_HERKUNFT_FOM = """
+    WITH master_beginner AS (
+        SELECT
+            se_m.PersonenFID,
+            l_m.Produktkuerzel AS M_PK,
+            l_m.HochschulzentrumKuerzel AS M_HSZ_K,
+            l_m.Hochschulzentrum AS M_HSZ,
+            l_m.Kohorte AS M_Kohorte,
+            se_m.ImmatrikulationsDatum AS M_ImDatum
+        FROM BCW_DWH.dwh.StudienEintraege se_m
+            INNER JOIN BCW_DWH.dwh.Lehrgaenge l_m ON l_m.LehrgangsID = se_m.LehrgangsFID
+            INNER JOIN BCW_DWH.dwh.Personen p_m ON p_m.PersonenID = se_m.PersonenFID
+        WHERE l_m.Institut = 'FOM'
+          AND l_m.Ausrichtung = 'national'
+          AND p_m.Testperson = 0
+          AND l_m.Produktart LIKE 'Master%'
+          AND l_m.Kohorte >= CONCAT(CAST(YEAR(DATEADD(YEAR, -5, GETDATE())) AS VARCHAR), '-WS')
+          AND l_m.Kohorte <= CONCAT(CAST(YEAR(GETDATE()) AS VARCHAR), CASE WHEN MONTH(GETDATE()) >= 9 THEN '-WS' ELSE '-SS' END)
+          AND l_m.Hochschulzentrum NOT IN ('Bangalore','Pune','Ahmedabad','Sofia','Venlo','Luxemburg')
+          AND se_m.ImmatrikulationsDatum < se_m.ExmatrikulationsDatum
+    ),
+    bachelor_abschluss AS (
+        SELECT
+            se_b.PersonenFID,
+            l_b.Produktkuerzel AS B_PK,
+            l_b.Studiengang AS B_SG,
+            l_b.StudiengangFamilie AS B_Familie,
+            l_b.HochschulzentrumKuerzel AS B_HSZ_K,
+            l_b.Hochschulzentrum AS B_HSZ,
+            se_b.ExmatrikulationsDatum AS B_ExDatum,
+            se_b.ImmatrikulationsDatum AS B_ImDatum
+        FROM BCW_DWH.dwh.StudienEintraege se_b
+            INNER JOIN BCW_DWH.dwh.Lehrgaenge l_b ON l_b.LehrgangsID = se_b.LehrgangsFID
+            LEFT JOIN BCW_DWH.dwh.C_StudienEin_ausstieg c_b ON c_b.StudienEintragID = se_b.StudienEintragID
+        WHERE l_b.Institut = 'FOM'
+          AND l_b.Ausrichtung = 'national'
+          AND l_b.Produktart LIKE 'Bachelor%'
+          AND (
+              c_b.Ausstiegsstatus = 'A'
+              OR (c_b.StudienEintragID IS NULL AND se_b.Exmatrikulationsgrund LIKE '1 %')
+          )
+          AND se_b.AbschlussNote > 0.1
+          AND se_b.ImmatrikulationsDatum < se_b.ExmatrikulationsDatum
+    )
+    SELECT
+        mb.PersonenFID, mb.M_PK, mb.M_HSZ_K, mb.M_HSZ, mb.M_Kohorte, mb.M_ImDatum,
+        ba.B_PK, ba.B_SG, ba.B_Familie, ba.B_HSZ_K, ba.B_HSZ, ba.B_ExDatum,
+        CASE WHEN mb.M_HSZ_K = ba.B_HSZ_K THEN 1 ELSE 0 END AS GleicherHSZ
     FROM master_beginner mb
         LEFT JOIN bachelor_abschluss ba ON ba.PersonenFID = mb.PersonenFID
             AND ba.B_ImDatum < mb.M_ImDatum
