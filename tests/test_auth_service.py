@@ -72,14 +72,18 @@ class TestEntraIdAuth:
 
 class TestLoadAppPermissions:
     def test_gibt_berechtigungen_zurueck(self, app):
-        mock_rows = [
-            {"Berechtigt": "max.mustermann", "Recht": "read", "Typ": "user"},
-            {"Berechtigt": "admin.user", "Recht": "admin", "Typ": "user"},
+        mock_cursor = MagicMock()
+        mock_cursor.description = [("Berechtigt",), ("Recht",), ("Typ",)]
+        mock_cursor.fetchall.return_value = [
+            ("max.mustermann", "read", "user"),
+            ("admin.user", "admin", "user"),
         ]
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
         with app.app_context():
             with patch(
-                "studiengang_steckbriefe.services.auth.mariadb_connector.query",
-                return_value=mock_rows,
+                "studiengang_steckbriefe.services.auth._get_perm_connection",
+                return_value=mock_conn,
             ):
                 perms = load_app_permissions()
         assert "read" in perms
@@ -88,34 +92,45 @@ class TestLoadAppPermissions:
 
 
 class TestGetUserRole:
+    def _mock_perm_conn(self, rows):
+        mock_cursor = MagicMock()
+        mock_cursor.description = [("Berechtigt",), ("Recht",), ("Typ",)]
+        mock_cursor.fetchall.return_value = rows
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        return mock_conn
+
     def test_gibt_hoechste_rolle_zurueck(self, app):
-        mock_rows = [
-            {"Berechtigt": "test.user", "Recht": "read", "Typ": "user"},
-            {"Berechtigt": "test.user", "Recht": "admin", "Typ": "user"},
-        ]
+        mock_conn = self._mock_perm_conn(
+            [
+                ("test.user", "read", "user"),
+                ("test.user", "admin", "user"),
+            ]
+        )
         with app.app_context():
             with patch(
-                "studiengang_steckbriefe.services.auth.mariadb_connector.query",
-                return_value=mock_rows,
+                "studiengang_steckbriefe.services.auth._get_perm_connection",
+                return_value=mock_conn,
             ):
                 role = get_user_role("test.user")
         assert role == "admin"
 
     def test_gibt_none_zurueck_wenn_kein_eintrag(self, app):
+        mock_conn = self._mock_perm_conn([])
         with app.app_context():
             with patch(
-                "studiengang_steckbriefe.services.auth.mariadb_connector.query",
-                return_value=[],
+                "studiengang_steckbriefe.services.auth._get_perm_connection",
+                return_value=mock_conn,
             ):
                 role = get_user_role("unbekannt")
         assert role is None
 
     def test_case_insensitive(self, app):
-        mock_rows = [{"Berechtigt": "TEST.USER", "Recht": "write", "Typ": "user"}]
+        mock_conn = self._mock_perm_conn([("TEST.USER", "write", "user")])
         with app.app_context():
             with patch(
-                "studiengang_steckbriefe.services.auth.mariadb_connector.query",
-                return_value=mock_rows,
+                "studiengang_steckbriefe.services.auth._get_perm_connection",
+                return_value=mock_conn,
             ):
                 role = get_user_role("test.user")
         assert role == "write"
