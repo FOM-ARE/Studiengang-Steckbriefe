@@ -1450,6 +1450,7 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
     pk_placeholders = ",".join("?" * len(variants))
 
     conn = get_connection()
+    conn.autocommit = True
     try:
         cursor = conn.cursor()
 
@@ -1536,11 +1537,13 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
 
     except Exception:
         try:
+            conn.autocommit = False
             conn.close()
         except Exception:
             pass
         raise
     else:
+        conn.autocommit = False
         release_connection(conn)
 
     data = {
