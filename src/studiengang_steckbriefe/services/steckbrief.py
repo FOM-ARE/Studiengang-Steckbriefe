@@ -1430,17 +1430,7 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
 
     Returns:
         Dict mit Anrechnungs-Daten.
-
-    Note:
-        Diese Funktion verwendet Temp-Tabellen und muss daher direkt auf der
-        DB-Connection arbeiten. Die komplexe Logik mit #gs_anr, #anr_data,
-        #antrag_qual wird in einem einzigen Connection-Kontext ausgefuehrt.
     """
-    from studiengang_steckbriefe.services.db_connector import (
-        get_connection,
-        release_connection,
-    )
-
     cache_key = f"anrechnungen_{produktkuerzel}"
     cached = cache_get(cache_key)
     if cached:
@@ -1449,28 +1439,21 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
     variants = expand_pk(produktkuerzel)
     pk_placeholders = ",".join("?" * len(variants))
 
-    conn = get_connection()
-    conn.autocommit = True
-    try:
-        cursor = conn.cursor()
-
-        # 1) Population: Alle Beginner/Quereinsteiger im Zeitraum inkl. AnrechnungsGrund
-        #    Quelle: se.AnrechnungsGrund auf StudienEintraege (keine separate Anrechnungen-Tabelle noetig)
-        try:
-            cursor.execute("DROP TABLE IF EXISTS #gs_anr")
-        except Exception:
-            pass
-        cursor.execute(
-            f"""
-            SELECT DISTINCT se.PersonenFID, se.StudienEintragID, l.Hochschulzentrum AS HSZ,
-                   se.AnrechnungsGrund
-            INTO #gs_anr
+    sql = f"""
+        WITH gs_anr AS (
+            SELECT DISTINCT
+                se.StudienEintragID,
+                se.AnrechnungsGrund
             FROM BCW_DWH.dwh.StudierendenStatusJeSemester sz
-                INNER JOIN BCW_DWH.dwh.StudienEintraege se ON se.StudienEintragID = sz.StudienEintragFID
-                INNER JOIN BCW_DWH.dwh.Lehrgaenge l ON l.LehrgangsID = se.LehrgangsFID
-                INNER JOIN BCW_DWH.dwh.StatusGruppen sg ON sg.Status = sz.Status
-            WHERE sg.StatusGruppe IN ('{config_db.get_param("anrechnungen", "statusgruppe_1", "Beginner mit UV")}',
-                                      '{config_db.get_param("anrechnungen", "statusgruppe_2", "Quereinsteiger mit UV")}')
+                INNER JOIN BCW_DWH.dwh.StudienEintraege se
+                    ON se.StudienEintragID = sz.StudienEintragFID
+                INNER JOIN BCW_DWH.dwh.Lehrgaenge l
+                    ON l.LehrgangsID = se.LehrgangsFID
+                INNER JOIN BCW_DWH.dwh.StatusGruppen sg
+                    ON sg.Status = sz.Status
+            WHERE sg.StatusGruppe IN (
+                    '{config_db.get_param("anrechnungen", "statusgruppe_1", "Beginner mit UV")}',
+                    '{config_db.get_param("anrechnungen", "statusgruppe_2", "Quereinsteiger mit UV")}')
               AND sz.Semesterkuerzel >= CONCAT(
                   YEAR(GETDATE()) - {config_db.get_param_int("anrechnungen", "semester_zurueck", 6)},
                   CASE WHEN MONTH(GETDATE()) >= 9 THEN '-WS'
@@ -1485,66 +1468,38 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
               AND l.Hochschulzentrum NOT IN ({config_db.EXCLUDED_HSZ_SQL})
               AND l.Ausrichtung = 'national'
               AND l.Produktkuerzel IN ({pk_placeholders})
-        """,
-            variants,
         )
+        SELECT
+            COUNT(DISTINCT StudienEintragID) AS Total,
+            COUNT(DISTINCT CASE WHEN AnrechnungsGrund IS NOT NULL
+                                     AND LTRIM(RTRIM(AnrechnungsGrund)) <> ''
+                                THEN StudienEintragID END) AS MitAnrechnung,
+            COUNT(DISTINCT CASE WHEN AnrechnungsGrund IN ({config_db.OFFENE_HOCHSCHULE_SQL})
+                                THEN StudienEintragID END) AS Beruflich,
+            COUNT(DISTINCT CASE WHEN AnrechnungsGrund IS NOT NULL
+                                     AND LTRIM(RTRIM(AnrechnungsGrund)) <> ''
+                                     AND AnrechnungsGrund NOT IN ({config_db.OFFENE_HOCHSCHULE_SQL})
+                                THEN StudienEintragID END) AS Hochschulisch,
+            COUNT(DISTINCT CASE WHEN AnrechnungsGrund IS NULL
+                                     OR LTRIM(RTRIM(AnrechnungsGrund)) = ''
+                                THEN StudienEintragID END) AS Keine
+        FROM gs_anr
+    """
 
-        # 2) Kennzahlen direkt aus #gs_anr berechnen
-        cursor.execute(f"""
-            SELECT
-                COUNT(DISTINCT StudienEintragID) AS Total,
-                -- mit Anrechnung = AnrechnungsGrund vorhanden
-                COUNT(DISTINCT CASE WHEN AnrechnungsGrund IS NOT NULL
-                                         AND LTRIM(RTRIM(AnrechnungsGrund)) <> ''
-                                    THEN StudienEintragID END) AS MitAnrechnung,
-                -- berufliche Qualifikation = Offene Hochschule (berufliche Vorkenntnisse)
-                COUNT(DISTINCT CASE WHEN AnrechnungsGrund IN ({config_db.OFFENE_HOCHSCHULE_SQL})
-                                    THEN StudienEintragID END) AS Beruflich,
-                -- hochschulische Qualifikation = vorhanden, aber NICHT beruflich
-                COUNT(DISTINCT CASE WHEN AnrechnungsGrund IS NOT NULL
-                                         AND LTRIM(RTRIM(AnrechnungsGrund)) <> ''
-                                         AND AnrechnungsGrund NOT IN ({config_db.OFFENE_HOCHSCHULE_SQL})
-                                    THEN StudienEintragID END) AS Hochschulisch,
-                -- keine Anrechnung
-                COUNT(DISTINCT CASE WHEN AnrechnungsGrund IS NULL
-                                         OR LTRIM(RTRIM(AnrechnungsGrund)) = ''
-                                    THEN StudienEintragID END) AS Keine
-            FROM #gs_anr
-        """)
-        row = cursor.fetchone()
-        if row is None:
-            row = (0, 0, 0, 0, 0)
-        s = dict(zip([c[0] for c in cursor.description], row, strict=False))
-        total = max(int(s.get("Total", 0) or 0), 1)
-        mit_anrechnung = int(s.get("MitAnrechnung", 0) or 0)
-        anteil_pct = round(mit_anrechnung / total * 100, 1)
-        beruflich_abs = int(s.get("Beruflich", 0) or 0)
-        hochschulisch_abs = int(s.get("Hochschulisch", 0) or 0)
-        hs_ber_abs = 0  # AnrechnungsGrund ist einwertig, hs+ber gleichzeitig nicht moeglich
-        keine_abs = int(s.get("Keine", 0) or 0)
-        hochschulisch_pct = round(hochschulisch_abs / total * 100, 1)
-        beruflich_pct = round(beruflich_abs / total * 100, 1)
-        hs_ber_pct = 0.0
-        keine_pct = round(keine_abs / total * 100, 1)
-        offene_hs_pct = beruflich_pct  # Offene Hochschule = berufliche Qualifikation
-        top_module: list = []  # Keine Einzel-Anrechnungszeilen verfuegbar
-
-        # Aufraeumen
-        try:
-            cursor.execute("DROP TABLE IF EXISTS #gs_anr")
-        except Exception:
-            pass
-
-    except Exception:
-        try:
-            conn.autocommit = False
-            conn.close()
-        except Exception:
-            pass
-        raise
-    else:
-        conn.autocommit = False
-        release_connection(conn)
+    rows = query_db(sql, variants)
+    s = rows[0] if rows else {}
+    total = max(int(s.get("Total", 0) or 0), 1)
+    mit_anrechnung = int(s.get("MitAnrechnung", 0) or 0)
+    anteil_pct = round(mit_anrechnung / total * 100, 1)
+    beruflich_abs = int(s.get("Beruflich", 0) or 0)
+    hochschulisch_abs = int(s.get("Hochschulisch", 0) or 0)
+    hs_ber_abs = 0  # AnrechnungsGrund ist einwertig, hs+ber gleichzeitig nicht moeglich
+    keine_abs = int(s.get("Keine", 0) or 0)
+    hochschulisch_pct = round(hochschulisch_abs / total * 100, 1)
+    beruflich_pct = round(beruflich_abs / total * 100, 1)
+    hs_ber_pct = 0.0
+    keine_pct = round(keine_abs / total * 100, 1)
+    offene_hs_pct = beruflich_pct  # Offene Hochschule = berufliche Qualifikation
 
     data = {
         "total_population": total,
@@ -1559,7 +1514,7 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
         "hs_ber_pct": hs_ber_pct,
         "keine_pct": keine_pct,
         "offene_hochschule_pct": offene_hs_pct,
-        "top_module": [{"name": m["Name"], "anzahl": int(m["Cnt"])} for m in top_module],
+        "top_module": [],
     }
     cache_set(cache_key, data)
     return data
