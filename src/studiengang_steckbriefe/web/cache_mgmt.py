@@ -93,6 +93,13 @@ def preload():
 @admin_required
 def reload_config_endpoint():
     """Laedt die Konfiguration aus MariaDB neu und leert den Cache."""
-    reload_config()
-    cache_clear()
-    return jsonify(success=True, message="Konfiguration neu geladen, Cache geleert")
+    try:
+        reload_config()
+        from studiengang_steckbriefe.services.queries import init_queries
+
+        init_queries()
+        cache_clear()
+        return jsonify(success=True, message="Konfiguration neu geladen, Cache geleert")
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify(success=False, error=str(e)), 500
