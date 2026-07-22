@@ -7,7 +7,7 @@ from flask import Blueprint, current_app, jsonify, redirect, request, session, u
 
 from studiengang_steckbriefe.services.auth import (
     EntraIdAuth,
-    get_role_from_groups,
+    get_role_from_token_claims,
     get_user_role,
 )
 
@@ -78,7 +78,6 @@ def callback():
         claims = result.get("id_token_claims", {})
         username = claims.get("preferred_username", "").split("@")[0]
         display_name = claims.get("name", username)
-        access_token = result.get("access_token", "")
 
     except ValueError:
         return redirect(url_for(LOGIN_PAGE, error="auth_failed"))
@@ -86,10 +85,14 @@ def callback():
         current_app.logger.exception("Entra ID Token-Exchange fehlgeschlagen: %s", exc)
         return redirect(url_for(LOGIN_PAGE, error="auth_failed"))
 
-    # Berechtigung pruefen: Zuerst AD-Gruppen via Graph API, dann DB als Fallback
+    # Berechtigung pruefen: Zuerst Gruppen aus Token-Claims, dann DB als Fallback
     role = None
-    if access_token:
-        role = get_role_from_groups(access_token)
+    group_mapping = {
+        current_app.config.get("ENTRA_GROUP_ADMIN", ""): "admin",
+        current_app.config.get("ENTRA_GROUP_WRITE", ""): "write",
+        current_app.config.get("ENTRA_GROUP_READ", ""): "read",
+    }
+    role = get_role_from_token_claims(claims, group_mapping)
 
     if not role:
         try:

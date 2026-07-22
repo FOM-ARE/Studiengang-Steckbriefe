@@ -1425,6 +1425,9 @@ def get_rahmendaten(produktkuerzel: str) -> dict:
 def get_anrechnungen(produktkuerzel: str) -> dict:
     """Berechnet Anrechnungs-Statistiken (HS, Beruflich, Offene Hochschule).
 
+    Nutzt primaer die neuen Anrechnung_*-Tabellen (ab Mai 2026) und faellt
+    fuer aeltere Eintraege auf se.AnrechnungsGrund zurueck.
+
     Args:
         produktkuerzel: Basis-Produktkuerzel des Studiengangs.
 
@@ -1439,6 +1442,9 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
     variants = expand_pk(produktkuerzel)
     pk_placeholders = ",".join("?" * len(variants))
 
+    # Haupt-Query: Population + Klassifizierung (neu + alt kombiniert)
+    # - Neue Tabelle: Anrechnung_AntragTN -> Anrechnung_Grundlage (GrundlagenTyp)
+    # - Fallback:     se.AnrechnungsGrund (fuer Eintraege ohne neuen Antrag)
     sql = f"""
         WITH gs_anr AS (
             SELECT DISTINCT
@@ -1468,22 +1474,59 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
               AND l.Hochschulzentrum NOT IN ({config_db.EXCLUDED_HSZ_SQL})
               AND l.Ausrichtung = 'national'
               AND l.Produktkuerzel IN ({pk_placeholders})
+        ),
+        neu_anr AS (
+            SELECT DISTINCT
+                g.StudienEintragID,
+                CASE
+                    WHEN g.GrundlagenTyp = 'Hochschulische Leistung'
+                        THEN 'Hochschulisch'
+                    WHEN g.GrundlagenTyp IN ('Ausbildung', 'Weiterbildung')
+                        THEN 'Beruflich'
+                    ELSE 'Beruflich'
+                END AS Kategorie
+            FROM (
+                SELECT DISTINCT
+                    atn.StnId AS StudienEintragID,
+                    gl.GrundlagenTyp
+                FROM BCW_STA.mariadb.Anrechnung_AntragTN atn
+                    INNER JOIN BCW_STA.mariadb.Anrechnung_Ergebnis e
+                        ON e.AnrechnungAntragTNFid = atn.Id
+                    INNER JOIN BCW_STA.mariadb.Anrechnung_ErgebnisModule em
+                        ON em.AnrechnungErgebnisFid = e.Id
+                    LEFT JOIN BCW_STA.mariadb.Anrechnung_Grundlage gl
+                        ON gl.AnrechnungantragTNFid = atn.Id
+                WHERE em.Anrechenbarkeit = 'angerechnet'
+            ) g
+        ),
+        klassifiziert AS (
+            SELECT
+                gs.StudienEintragID,
+                CASE
+                    WHEN na.StudienEintragID IS NOT NULL THEN na.Kategorie
+                    WHEN gs.AnrechnungsGrund IS NOT NULL
+                         AND LTRIM(RTRIM(gs.AnrechnungsGrund)) <> ''
+                         AND gs.AnrechnungsGrund IN ({config_db.OFFENE_HOCHSCHULE_SQL})
+                        THEN 'Beruflich'
+                    WHEN gs.AnrechnungsGrund IS NOT NULL
+                         AND LTRIM(RTRIM(gs.AnrechnungsGrund)) <> ''
+                        THEN 'Hochschulisch'
+                    ELSE 'Keine'
+                END AS Kategorie
+            FROM gs_anr gs
+                LEFT JOIN neu_anr na ON na.StudienEintragID = gs.StudienEintragID
         )
         SELECT
             COUNT(DISTINCT StudienEintragID) AS Total,
-            COUNT(DISTINCT CASE WHEN AnrechnungsGrund IS NOT NULL
-                                     AND LTRIM(RTRIM(AnrechnungsGrund)) <> ''
+            COUNT(DISTINCT CASE WHEN Kategorie <> 'Keine'
                                 THEN StudienEintragID END) AS MitAnrechnung,
-            COUNT(DISTINCT CASE WHEN AnrechnungsGrund IN ({config_db.OFFENE_HOCHSCHULE_SQL})
+            COUNT(DISTINCT CASE WHEN Kategorie = 'Beruflich'
                                 THEN StudienEintragID END) AS Beruflich,
-            COUNT(DISTINCT CASE WHEN AnrechnungsGrund IS NOT NULL
-                                     AND LTRIM(RTRIM(AnrechnungsGrund)) <> ''
-                                     AND AnrechnungsGrund NOT IN ({config_db.OFFENE_HOCHSCHULE_SQL})
+            COUNT(DISTINCT CASE WHEN Kategorie = 'Hochschulisch'
                                 THEN StudienEintragID END) AS Hochschulisch,
-            COUNT(DISTINCT CASE WHEN AnrechnungsGrund IS NULL
-                                     OR LTRIM(RTRIM(AnrechnungsGrund)) = ''
+            COUNT(DISTINCT CASE WHEN Kategorie = 'Keine'
                                 THEN StudienEintragID END) AS Keine
-        FROM gs_anr
+        FROM klassifiziert
     """
 
     rows = query_db(sql, variants)
@@ -1493,7 +1536,7 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
     anteil_pct = round(mit_anrechnung / total * 100, 1)
     beruflich_abs = int(s.get("Beruflich", 0) or 0)
     hochschulisch_abs = int(s.get("Hochschulisch", 0) or 0)
-    hs_ber_abs = 0  # AnrechnungsGrund ist einwertig, hs+ber gleichzeitig nicht moeglich
+    hs_ber_abs = 0
     keine_abs = int(s.get("Keine", 0) or 0)
     hochschulisch_pct = round(hochschulisch_abs / total * 100, 1)
     beruflich_pct = round(beruflich_abs / total * 100, 1)
@@ -1501,30 +1544,62 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
     keine_pct = round(keine_abs / total * 100, 1)
     offene_hs_pct = beruflich_pct  # Offene Hochschule = berufliche Qualifikation
 
-    # Top-10 angerechnete Module aus t_pruefungsergebnisse
+    # Top-10 angerechnete Module: alte Quelle (pe.Anerkannt) + neue Quelle (ErgebnisModule)
     sql_top = f"""
-        SELECT TOP 10
-            mb.Bezeichnung AS Name,
-            COUNT(DISTINCT n.StudienEintragFID) AS Cnt
-        FROM BCW_DWH.dwh.Noten n
-            INNER JOIN BCW_DWH.dwh.StudienEintraege se
-                ON se.StudienEintragID = n.StudienEintragFID
-            INNER JOIN BCW_DWH.dwh.Lehrgaenge l
-                ON l.LehrgangsID = se.LehrgangsFID
-            INNER JOIN BCW_STA.mariadb.t_pruefungsergebnisse pe
-                ON pe.PruefungsErgebnisID = n.PruefungsErgebnisFID
-            INNER JOIN BCW_STA.mariadb.t_modulbeschreibung mb
-                ON mb.ModulID = n.ModulFID
-        WHERE l.Produktkuerzel IN ({pk_placeholders})
-          AND l.Institut = 'FOM'
-          AND l.Ausrichtung = 'national'
-          AND l.Hochschulzentrum NOT IN ({config_db.EXCLUDED_HSZ_SQL})
-          AND pe.Anerkannt = 'J'
-          AND se.ImmatrikulationsDatum < se.ExmatrikulationsDatum
-        GROUP BY mb.Bezeichnung
-        ORDER BY COUNT(DISTINCT n.StudienEintragFID) DESC
+        SELECT TOP 10 Name, SUM(Cnt) AS Cnt FROM (
+            SELECT
+                mb.Bezeichnung AS Name,
+                COUNT(DISTINCT n.StudienEintragFID) AS Cnt
+            FROM BCW_DWH.dwh.Noten n
+                INNER JOIN BCW_DWH.dwh.StudienEintraege se
+                    ON se.StudienEintragID = n.StudienEintragFID
+                INNER JOIN BCW_DWH.dwh.Lehrgaenge l
+                    ON l.LehrgangsID = se.LehrgangsFID
+                INNER JOIN BCW_STA.mariadb.t_pruefungsergebnisse pe
+                    ON pe.PruefungsErgebnisID = n.PruefungsErgebnisFID
+                INNER JOIN BCW_STA.mariadb.t_modulbeschreibung mb
+                    ON mb.ModulID = n.ModulFID
+            WHERE l.Produktkuerzel IN ({pk_placeholders})
+              AND l.Institut = 'FOM'
+              AND l.Ausrichtung = 'national'
+              AND l.Hochschulzentrum NOT IN ({config_db.EXCLUDED_HSZ_SQL})
+              AND pe.Anerkannt = 'Y'
+              AND se.ImmatrikulationsDatum < se.ExmatrikulationsDatum
+            GROUP BY mb.Bezeichnung
+
+            UNION ALL
+
+            SELECT
+                em.ModulName AS Name,
+                COUNT(DISTINCT atn.StnId) AS Cnt
+            FROM BCW_STA.mariadb.Anrechnung_AntragTN atn
+                INNER JOIN BCW_DWH.dwh.StudienEintraege se
+                    ON se.StudienEintragID = atn.StnId
+                INNER JOIN BCW_DWH.dwh.Lehrgaenge l
+                    ON l.LehrgangsID = se.LehrgangsFID
+                INNER JOIN BCW_STA.mariadb.Anrechnung_Ergebnis e
+                    ON e.AnrechnungAntragTNFid = atn.Id
+                INNER JOIN BCW_STA.mariadb.Anrechnung_ErgebnisModule em
+                    ON em.AnrechnungErgebnisFid = e.Id
+            WHERE l.Produktkuerzel IN ({pk_placeholders})
+              AND l.Institut = 'FOM'
+              AND l.Ausrichtung = 'national'
+              AND l.Hochschulzentrum NOT IN ({config_db.EXCLUDED_HSZ_SQL})
+              AND em.Anrechenbarkeit = 'angerechnet'
+              AND atn.StnId NOT IN (
+                  SELECT DISTINCT n2.StudienEintragFID
+                  FROM BCW_DWH.dwh.Noten n2
+                  INNER JOIN BCW_STA.mariadb.t_pruefungsergebnisse pe2
+                      ON pe2.PruefungsErgebnisID = n2.PruefungsErgebnisFID
+                  WHERE pe2.Anerkannt = 'Y'
+                    AND n2.StudienEintragFID = atn.StnId
+              )
+            GROUP BY em.ModulName
+        ) combined
+        GROUP BY Name
+        ORDER BY SUM(Cnt) DESC
     """
-    top_module_rows = query_db(sql_top, variants)
+    top_module_rows = query_db(sql_top, variants + variants)
 
     data = {
         "total_population": total,

@@ -43,13 +43,23 @@ def load_keyvault_secrets(app):
                 "- nutze FLASK_SECRET_KEY-Umgebungsvariable"
             )
 
-        # MariaDB Passwort
+        # MariaDB Passwort (Konfigurations-DB)
         try:
             app.config["MARIADB_PASSWORD"] = client.get_secret("mariadb-password").value
         except Exception:
             app.logger.warning(
                 "Secret 'mariadb-password' nicht im Key Vault gefunden "
                 "- nutze DB_PASSWORD-Umgebungsvariable"
+            )
+
+        # Berechtigungs-DB Passwort (SQL Server BCW_STA, User App.SG_Steckbriefe)
+        try:
+            app.config["PERM_DWH_PASSWORD"] = client.get_secret("DWHAppBerechtigung").value
+            app.logger.info("Berechtigungs-DB: Passwort aus Key Vault geladen")
+        except Exception:
+            app.logger.warning(
+                "Secret 'DWHAppBerechtigung' nicht im Key Vault gefunden "
+                "- nutze PERM_DWH_PASSWORD-Umgebungsvariable"
             )
 
         # DWH Passwort (Secret heisst 'dwh-user' im Key Vault)

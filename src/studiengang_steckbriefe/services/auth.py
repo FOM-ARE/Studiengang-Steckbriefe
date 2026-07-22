@@ -3,19 +3,13 @@
 import logging
 
 import msal
-import requests
+import pyodbc
 from flask import current_app, session
-
-from studiengang_steckbriefe.services import mariadb_connector
 
 logger = logging.getLogger(__name__)
 
-# Mapping: AD-Gruppenname → App-Rolle
-GROUP_ROLE_MAPPING = {
-    "StudiengangSteckbriefeAdmin": "admin",
-    "StudiengangSteckbriefeWrite": "write",
-    "StudiengangSteckbriefeRead": "read",
-}
+# Rollen-Hierarchie fuer Gruppenauswertung
+ROLE_HIERARCHY = {"admin": 3, "write": 2, "read": 1}
 
 
 class EntraIdAuth:
@@ -26,7 +20,7 @@ class EntraIdAuth:
         self._client_secret = app.config["ENTRA_CLIENT_SECRET"]
         self._authority = app.config["ENTRA_AUTHORITY"]
         self._redirect_uri = app.config["ENTRA_REDIRECT_URI"]
-        self._scope = ["User.Read", "GroupMember.Read.All"]
+        self._scope = ["User.Read"]
         self._msal_app = msal.ConfidentialClientApplication(
             self._client_id,
             authority=self._authority,
@@ -62,45 +56,38 @@ class EntraIdAuth:
 # ═══════════════════════════════════════
 
 
-def get_role_from_groups(access_token: str) -> str | None:
-    """Fragt die Gruppenzugehoerigkeit via Microsoft Graph API ab.
+def get_role_from_token_claims(
+    claims: dict, group_mapping: dict[str, str]
+) -> str | None:
+    """Bestimmt die Rolle aus dem groups-Claim im ID-Token.
+
+    Die Gruppen-Object-IDs werden direkt im signierten ID-Token von Microsoft
+    mitgeliefert (Token-Konfiguration in der App Registration). Kein
+    zusaetzlicher Graph-API-Call und kein Admin Consent noetig.
 
     Args:
-        access_token: Das Access Token aus dem Auth Code Flow.
+        claims: Die id_token_claims aus dem MSAL-Token.
+        group_mapping: Dict {group_object_id: role_name}.
 
     Returns:
-        Die hoechste Rolle basierend auf AD-Gruppen oder None.
+        Die hoechste Rolle oder None.
     """
-    role_hierarchy = {"admin": 3, "write": 2, "read": 1}
-    try:
-        resp = requests.get(
-            "https://graph.microsoft.com/v1.0/me/memberOf?$select=displayName&$top=200",
-            headers={"Authorization": f"Bearer {access_token}"},
-            timeout=10,
+    user_groups = set(claims.get("groups", []))
+    if not user_groups:
+        logger.info(
+            "Keine Gruppen im Token-Claim gefunden (groups-Claim leer oder nicht konfiguriert)"
         )
-        if resp.status_code != 200:
-            logger.warning(
-                "Graph API /me/memberOf fehlgeschlagen: %s %s",
-                resp.status_code,
-                resp.text[:200],
-            )
-            return None
-
-        groups = resp.json().get("value", [])
-        max_level = 0
-        max_role = None
-        for group in groups:
-            name = group.get("displayName", "")
-            role = GROUP_ROLE_MAPPING.get(name)
-            if role:
-                level = role_hierarchy.get(role, 0)
-                if level > max_level:
-                    max_level = level
-                    max_role = role
-        return max_role
-    except Exception as exc:
-        logger.warning("Graph API Gruppenabfrage fehlgeschlagen: %s", exc)
         return None
+
+    max_level = 0
+    max_role = None
+    for group_id, role in group_mapping.items():
+        if group_id and group_id in user_groups:
+            level = ROLE_HIERARCHY.get(role, 0)
+            if level > max_level:
+                max_level = level
+                max_role = role
+    return max_role
 
 
 # ═══════════════════════════════════════
@@ -108,24 +95,57 @@ def get_role_from_groups(access_token: str) -> str | None:
 # ═══════════════════════════════════════
 
 
+def _get_perm_connection():
+    """Erstellt eine pyodbc-Verbindung zur Berechtigungs-DB (BCW_STA)."""
+    host = current_app.config["PERM_DWH_HOST"]
+    port = current_app.config["PERM_DWH_PORT"]
+    database = current_app.config["PERM_DWH_DATABASE"]
+    auth = current_app.config.get("PERM_DWH_AUTHENTICATION", "SQL")
+
+    available = [d for d in pyodbc.drivers() if "SQL Server" in d]
+    driver = "{" + available[-1] + "}" if available else "{ODBC Driver 17 for SQL Server}"
+
+    if auth == "Windows":
+        conn_str = (
+            f"DRIVER={driver};SERVER={host},{port};DATABASE={database};"
+            f"Trusted_Connection=yes;TrustServerCertificate=yes;"
+        )
+    else:
+        user = current_app.config.get("PERM_DWH_USER", "")
+        password = current_app.config.get("PERM_DWH_PASSWORD", "")
+        conn_str = (
+            f"DRIVER={driver};SERVER={host},{port};DATABASE={database};"
+            f"UID={user};PWD={password};TrustServerCertificate=yes;"
+        )
+    return pyodbc.connect(conn_str, timeout=10)
+
+
 def load_app_permissions() -> dict[str, list[dict]]:
-    """Laedt Berechtigungen fuer diese App aus der MariaDB.
+    """Laedt Berechtigungen fuer diese App aus BCW_STA.readwrite.App_Berechtigungen.
 
     Returns:
-        Dict: {recht: [{'berechtigt': ..., 'typ': ..., 'display_name': ...}, ...]}
+        Dict: {recht: [{'berechtigt': ..., 'typ': ...}, ...]}
     """
     app_name = current_app.config["APP_NAME"]
-    rows = mariadb_connector.query(
-        "SELECT Berechtigt, Recht, Typ FROM t_app_berechtigungen WHERE App = %s AND Aktiv = 1",
-        (app_name,),
-    )
+    conn = _get_perm_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT Berechtigt, Recht, Typ FROM readwrite.App_Berechtigungen"
+            " WHERE App = ? AND Aktiv = 1",
+            (app_name,),
+        )
+        columns = [col[0] for col in cursor.description]
+        rows = [dict(zip(columns, row, strict=False)) for row in cursor.fetchall()]
+    finally:
+        conn.close()
+
     permissions: dict[str, list[dict]] = {}
     for r in rows:
         permissions.setdefault(r["Recht"], []).append(
             {
                 "berechtigt": r["Berechtigt"],
                 "typ": r["Typ"],
-                "display_name": "",
             }
         )
     return permissions

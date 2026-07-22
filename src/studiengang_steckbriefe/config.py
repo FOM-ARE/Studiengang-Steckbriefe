@@ -61,7 +61,18 @@ class Config:
     ENTRA_REDIRECT_URI = os.environ.get(
         "ENTRA_REDIRECT_URI", "http://localhost:5000/api/auth/callback"
     )
+    # Entra ID Gruppen (Object-IDs fuer Token-Claims-basierte Rollenzuordnung)
+    ENTRA_GROUP_ADMIN = os.environ.get("ENTRA_GROUP_ADMIN", "")
+    ENTRA_GROUP_WRITE = os.environ.get("ENTRA_GROUP_WRITE", "")
+    ENTRA_GROUP_READ = os.environ.get("ENTRA_GROUP_READ", "")
 
+    # Berechtigungs-DB (SQL Server BCW_STA – eigener User nur fuer Berechtigungstabelle)
+    PERM_DWH_HOST = os.environ.get("PERM_DWH_HOST", "ms-sql-107.bcw-intern.local")
+    PERM_DWH_PORT = os.environ.get("PERM_DWH_PORT", "1433")
+    PERM_DWH_DATABASE = os.environ.get("PERM_DWH_DATABASE", "BCW_STA")
+    PERM_DWH_USER = os.environ.get("PERM_DWH_USER", "App.SG_Steckbriefe")
+    PERM_DWH_PASSWORD = os.environ.get("PERM_DWH_PASSWORD", "")
+    PERM_DWH_AUTHENTICATION = os.environ.get("PERM_DWH_AUTHENTICATION", "SQL")
     # CORS
     CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:8000").split(",")
 
