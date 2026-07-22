@@ -1175,7 +1175,7 @@ def get_zuzahler(produktkuerzel: str) -> dict:
     sg_pct = []
     for sem in semester:
         sem_rows = [r for r in zuz_rows if r["Semesterkuerzel"] == sem]
-        gesamt = sum(int(r.get("Gesamtstudierende", 0) or 0) for r in sem_rows)
+        gesamt = sum(int(r.get("Total", 0) or 0) for r in sem_rows)
         zuz = sum(int(r.get("Zuzahler", 0) or 0) for r in sem_rows)
         sg_gesamt.append(gesamt)
         sg_zuzahler.append(zuz)
@@ -1185,7 +1185,7 @@ def get_zuzahler(produktkuerzel: str) -> dict:
     fom_pct = []
     for sem in semester:
         fom_sem = [r for r in zuz_fom_filtered if r["Semesterkuerzel"] == sem]
-        gesamt = sum(int(r.get("Gesamtstudierende", 0) or 0) for r in fom_sem)
+        gesamt = sum(int(r.get("Total", 0) or 0) for r in fom_sem)
         zuz = sum(int(r.get("Zuzahler", 0) or 0) for r in fom_sem)
         fom_pct.append(round(zuz / max(gesamt, 1) * 100, 1))
 
