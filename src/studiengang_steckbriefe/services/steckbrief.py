@@ -732,29 +732,51 @@ def get_studienerfolg(produktkuerzel: str) -> dict:
 # ===================================================================
 
 
-def _classify_uebergang(row: dict) -> str:
-    """Klassifiziert eine Uebergangs-Zeile."""
-    if row.get("B_PK") is None:
-        return "kein_bachelor"
-    b_familie = (row.get("B_Familie") or "").strip()
-    m_pk = (row.get("M_PK") or "").strip()
-    # Gleiche Fachrichtung?
-    if b_familie and m_pk and b_familie[1:] == m_pk[1:]:
-        return "gleiche_fachrichtung"
-    return "andere_fachrichtung"
+_UEBERGANG_KATEGORIEN = [
+    "kein_master",
+    "am_jetzigen_ueberschneidung",
+    "am_jetzigen_folgesemester",
+    "am_jetzigen_pause",
+    "an_anderem_ueberschneidung",
+    "an_anderem_folgesemester",
+    "an_anderem_pause",
+]
+
+
+def _classify_uebergang_detail(row: dict) -> str:
+    """Klassifiziert eine Uebergangs-Zeile in detaillierte Kategorien."""
+    m_pk = row.get("M_PK")
+    if not m_pk:
+        return "kein_master"
+
+    b_hsz = (row.get("B_HSZ_K") or "").strip()
+    m_hsz = (row.get("M_HSZ_K") or "").strip()
+    b_ex = row.get("B_ExDatum")
+    m_im = row.get("M_ImDatum")
+
+    same_hsz = bool(b_hsz and m_hsz and b_hsz == m_hsz)
+    prefix = "am_jetzigen" if same_hsz else "an_anderem"
+
+    timing = "pause"
+    if b_ex and m_im:
+        try:
+            diff_days = (m_im - b_ex).days
+            if diff_days <= 0:
+                timing = "ueberschneidung"
+            elif diff_days <= 270:
+                timing = "folgesemester"
+        except Exception:
+            pass
+
+    return f"{prefix}_{timing}"
 
 
 def _dedup_uebergang(rows: list[dict]) -> list[dict]:
-    """Dedupliziert Uebergangs-Daten (eine Person pro Master-Eintrag)."""
+    """Dedupliziert Uebergangs-Daten (eine Person pro Bachelor-Kohorte)."""
     seen: set = set()
     result = []
     for r in rows:
-        key = (
-            r.get("PersonenFID"),
-            r.get("M_PK"),
-            r.get("M_HSZ_K"),
-            r.get("M_Kohorte"),
-        )
+        key = (r.get("PersonenFID"), r.get("B_Kohorte"), r.get("M_PK"), r.get("M_HSZ_K"))
         if key in seen:
             continue
         seen.add(key)
@@ -762,36 +784,50 @@ def _dedup_uebergang(rows: list[dict]) -> list[dict]:
     return result
 
 
-def _compute_uebergang_stats(rows: list[dict], kohorten_set: list[str]) -> tuple[dict, dict, dict]:
-    """Berechnet Uebergangs-Statistiken pro Kohorte."""
-    herkunft: dict = {}
-    master_total_per_kohorte: dict = {}
-    master_sg_counts: dict = {}
+def _compute_uebergang_stats(
+    rows: list[dict], kohorten_set: list[str]
+) -> tuple[dict, dict]:
+    """Berechnet detaillierte Uebergangs-Statistiken pro Kohorte."""
+    per_kohorte: dict = {}
+    master_sg_per_kohorte: dict = {}
 
     for kohorte in kohorten_set:
         kohorte_rows = [r for r in rows if str(r.get("B_Kohorte")) == kohorte]
-        total = len(kohorte_rows)
-        master_total_per_kohorte[kohorte] = total
 
-        # Herkunft-Klassifizierung
-        kein_ba = sum(1 for r in kohorte_rows if _classify_uebergang(r) == "kein_bachelor")
-        gleich = sum(1 for r in kohorte_rows if _classify_uebergang(r) == "gleiche_fachrichtung")
-        andere = sum(1 for r in kohorte_rows if _classify_uebergang(r) == "andere_fachrichtung")
-
-        herkunft[kohorte] = {
-            "kein_bachelor": kein_ba,
-            "gleiche_fachrichtung": gleich,
-            "andere_fachrichtung": andere,
-            "total": total,
-        }
-
-        # Master-SG Counts
+        # Pro Person: besten Eintrag bestimmen (frueheste Master-Einschreibung)
+        persons: dict = {}
         for r in kohorte_rows:
-            b_sg = r.get("B_SG") or "Unbekannt"
-            master_sg_counts.setdefault(kohorte, {})
-            master_sg_counts[kohorte][b_sg] = master_sg_counts[kohorte].get(b_sg, 0) + 1
+            pid = r.get("PersonenFID")
+            if pid not in persons:
+                persons[pid] = r
+            else:
+                ex = persons[pid]
+                ex_m = ex.get("M_PK")
+                r_m = r.get("M_PK")
+                if not ex_m and r_m:
+                    persons[pid] = r
+                elif ex_m and r_m:
+                    ex_im = ex.get("M_ImDatum")
+                    r_im = r.get("M_ImDatum")
+                    if r_im and ex_im and r_im < ex_im:
+                        persons[pid] = r
 
-    return herkunft, master_total_per_kohorte, master_sg_counts
+        total = len(persons) or 1
+        counts = {k: 0 for k in _UEBERGANG_KATEGORIEN}
+        sg_counts: dict = {}
+
+        for r in persons.values():
+            cat = _classify_uebergang_detail(r)
+            if cat in counts:
+                counts[cat] += 1
+            m_sg = (r.get("M_SG") or "").strip()
+            if m_sg:
+                sg_counts[m_sg] = sg_counts.get(m_sg, 0) + 1
+
+        per_kohorte[kohorte] = {"total": total, "counts": counts}
+        master_sg_per_kohorte[kohorte] = sg_counts
+
+    return per_kohorte, master_sg_per_kohorte
 
 
 def _get_fom_uebergang_avg() -> dict | None:
@@ -808,19 +844,14 @@ def _get_fom_uebergang_avg() -> dict | None:
     kohorten_set = sorted(
         set(str(r["B_Kohorte"]) for r in fom_rows if r.get("B_Kohorte")), reverse=True
     )
-    herkunft, _, _ = _compute_uebergang_stats(fom_rows, kohorten_set)
+    per_kohorte, _ = _compute_uebergang_stats(fom_rows, kohorten_set)
 
-    # Durchschnitt ueber alle Kohorten
-    total_all = sum(h["total"] for h in herkunft.values()) or 1
-    kein_ba_all = sum(h["kein_bachelor"] for h in herkunft.values())
-    gleich_all = sum(h["gleiche_fachrichtung"] for h in herkunft.values())
-    andere_all = sum(h["andere_fachrichtung"] for h in herkunft.values())
+    total_all = sum(d["total"] for d in per_kohorte.values()) or 1
+    fom_avg = {}
+    for kat in _UEBERGANG_KATEGORIEN:
+        total_kat = sum(d["counts"][kat] for d in per_kohorte.values())
+        fom_avg[f"{kat}_pct"] = round(total_kat / total_all * 100, 1)
 
-    fom_avg = {
-        "kein_bachelor_pct": round(kein_ba_all / total_all * 100, 1),
-        "gleiche_fachrichtung_pct": round(gleich_all / total_all * 100, 1),
-        "andere_fachrichtung_pct": round(andere_all / total_all * 100, 1),
-    }
     cache_set("_global_uebergang_fom", fom_avg)
     return fom_avg
 
@@ -846,39 +877,126 @@ def get_uebergang(produktkuerzel: str) -> dict:
     kohorten_set = sorted(
         set(str(r["B_Kohorte"]) for r in rows if r.get("B_Kohorte")), reverse=True
     )
-    herkunft, master_total_per_kohorte, master_sg_counts = _compute_uebergang_stats(
-        rows, kohorten_set
-    )
 
-    # Master-Studiengaenge Top 10
-    all_sg_counts: dict = {}
-    for kohorte_counts in master_sg_counts.values():
-        for sg, cnt in kohorte_counts.items():
-            all_sg_counts[sg] = all_sg_counts.get(sg, 0) + cnt
-    total_mit_ba = sum(cnt for cnt in all_sg_counts.values()) or 1
-    top_sg = sorted(all_sg_counts.items(), key=lambda x: -x[1])[:10]
-    top_studiengaenge = [
-        {"name": sg, "anzahl": cnt, "pct": round(cnt / total_mit_ba * 100, 1)} for sg, cnt in top_sg
+    if not kohorten_set:
+        return None
+
+    per_kohorte, master_sg_per_kohorte = _compute_uebergang_stats(rows, kohorten_set)
+
+    def pct_per_kohorte(kat: str) -> list[float]:
+        return [
+            round(per_kohorte[k]["counts"][kat] / per_kohorte[k]["total"] * 100, 1)
+            for k in kohorten_set
+        ]
+
+    def sum_pct_per_kohorte(*kats: str) -> list[float]:
+        return [
+            round(
+                sum(per_kohorte[k]["counts"][kat] for kat in kats)
+                / per_kohorte[k]["total"]
+                * 100,
+                1,
+            )
+            for k in kohorten_set
+        ]
+
+    herkunft = {
+        "kein_master": pct_per_kohorte("kein_master"),
+        "am_jetzigen_hsz": sum_pct_per_kohorte(
+            "am_jetzigen_ueberschneidung", "am_jetzigen_folgesemester", "am_jetzigen_pause"
+        ),
+        "am_jetzigen_ueberschneidung": pct_per_kohorte("am_jetzigen_ueberschneidung"),
+        "am_jetzigen_folgesemester": pct_per_kohorte("am_jetzigen_folgesemester"),
+        "am_jetzigen_pause": pct_per_kohorte("am_jetzigen_pause"),
+        "an_anderem_hsz": sum_pct_per_kohorte(
+            "an_anderem_ueberschneidung", "an_anderem_folgesemester", "an_anderem_pause"
+        ),
+        "an_anderem_ueberschneidung": pct_per_kohorte("an_anderem_ueberschneidung"),
+        "an_anderem_folgesemester": pct_per_kohorte("an_anderem_folgesemester"),
+        "an_anderem_pause": pct_per_kohorte("an_anderem_pause"),
+    }
+
+    # Top-8 Master-Studiengaenge mit Anteil pro Kohorte
+    all_sg: dict = {}
+    for sg_map in master_sg_per_kohorte.values():
+        for sg, cnt in sg_map.items():
+            all_sg[sg] = all_sg.get(sg, 0) + cnt
+    top_sgs = sorted(all_sg.items(), key=lambda x: -x[1])[:8]
+    master_studiengaenge = [
+        {
+            "name": sg,
+            "werte": [
+                round(
+                    master_sg_per_kohorte.get(k, {}).get(sg, 0)
+                    / per_kohorte[k]["total"]
+                    * 100,
+                    1,
+                )
+                for k in kohorten_set
+            ],
+        }
+        for sg, _ in top_sgs
     ]
 
-    # Herkunft pro Kohorte als Listen
-    kohorte_labels = kohorten_set
-    herkunft_kein_ba = [herkunft[k]["kein_bachelor"] for k in kohorten_set]
-    herkunft_gleich = [herkunft[k]["gleiche_fachrichtung"] for k in kohorten_set]
-    herkunft_andere = [herkunft[k]["andere_fachrichtung"] for k in kohorten_set]
-    herkunft_total = [herkunft[k]["total"] for k in kohorten_set]
+    # Uebersicht-Daten fuer Bar-Chart (Durchschnitt aller Kohorten)
+    total_all = sum(d["total"] for d in per_kohorte.values()) or 1
 
-    # FOM-Durchschnitt
+    def avg_pct(kat: str) -> float:
+        return round(
+            sum(per_kohorte[k]["counts"][kat] for k in kohorten_set) / total_all * 100, 1
+        )
+
+    uebersicht_sg = [
+        avg_pct("kein_master"),
+        avg_pct("am_jetzigen_ueberschneidung"),
+        avg_pct("am_jetzigen_folgesemester"),
+        avg_pct("am_jetzigen_pause"),
+        avg_pct("an_anderem_ueberschneidung"),
+        avg_pct("an_anderem_folgesemester"),
+        avg_pct("an_anderem_pause"),
+    ]
+    uebersicht_labels = [
+        "kein Master",
+        "m. Ueberschn.",
+        "im Folgesem.",
+        "nach Pause",
+        "m. Ueberschn.",
+        "im Folgesem.",
+        "nach Pause",
+    ]
+    uebersicht_gruppen = [
+        None,
+        "am jetzigen HSZ",
+        "am jetzigen HSZ",
+        "am jetzigen HSZ",
+        "an anderem HSZ",
+        "an anderem HSZ",
+        "an anderem HSZ",
+    ]
+
     fom_avg = _get_fom_uebergang_avg()
+    uebersicht_fom = (
+        [
+            fom_avg.get("kein_master_pct", 0),
+            fom_avg.get("am_jetzigen_ueberschneidung_pct", 0),
+            fom_avg.get("am_jetzigen_folgesemester_pct", 0),
+            fom_avg.get("am_jetzigen_pause_pct", 0),
+            fom_avg.get("an_anderem_ueberschneidung_pct", 0),
+            fom_avg.get("an_anderem_folgesemester_pct", 0),
+            fom_avg.get("an_anderem_pause_pct", 0),
+        ]
+        if fom_avg
+        else None
+    )
 
     data = {
-        "kohorten": kohorte_labels,
-        "herkunft_kein_bachelor": herkunft_kein_ba,
-        "herkunft_gleiche_fachrichtung": herkunft_gleich,
-        "herkunft_andere_fachrichtung": herkunft_andere,
-        "herkunft_total": herkunft_total,
-        "top_bachelor_studiengaenge": top_studiengaenge,
-        "fom_avg": fom_avg,
+        "kohorten": kohorten_set,
+        "herkunft": herkunft,
+        "master_studiengaenge": master_studiengaenge,
+        "uebersicht_labels": uebersicht_labels,
+        "uebersicht_gruppen": uebersicht_gruppen,
+        "uebersicht_sg": uebersicht_sg,
+        "uebersicht_fom": uebersicht_fom,
     }
     cache_set(cache_key, data)
     return data

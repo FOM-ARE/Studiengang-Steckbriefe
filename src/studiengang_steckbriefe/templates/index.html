@@ -1448,18 +1448,23 @@
                 content.className = `section-content ${tab.id === resolvedTab ? 'active' : ''}`;
                 let html = '';
                 const refreshBtnHtml = (currentUser && currentUser.role === 'admin') ? `<div class="tab-header-row"><button class="btn-tab-refresh" id="btn-refresh-${tab.id}" onclick="refreshTabData('${tab.id}')" title="Daten für diesen Tab neu laden">🔄 Aktualisieren</button></div>` : '';
-                if (!hasData[tab.id]) {
-                    html = noDataHtml;
-                } else if (tab.id === 'rahmendaten') html = refreshBtnHtml + renderRahmendaten(programme);
-                else if (tab.id === 'trends') html = refreshBtnHtml + renderTrends(programme);
-                else if (tab.id === 'studienbeginner') html = refreshBtnHtml + renderStudienbeginner(programme);
-                else if (tab.id === 'anrechnungen') html = refreshBtnHtml + renderAnrechnungen(programme);
-                else if (tab.id === 'stammdaten') html = refreshBtnHtml + renderStammdaten(programme);
-                else if (tab.id === 'studienerfolg') html = refreshBtnHtml + renderStudienerfolg(programme);
-                else if (tab.id === 'uebergang') html = refreshBtnHtml + renderUebergangsverhalten(programme);
-                else if (tab.id === 'herkunft') html = refreshBtnHtml + renderHerkunftMaster(programme);
-                else if (tab.id === 'zuzahler') html = refreshBtnHtml + renderZuzahler(programme);
-                else if (tab.id === 'vertiefung') html = refreshBtnHtml + renderVertiefungsrichtungen(programme);
+                try {
+                    if (!hasData[tab.id]) {
+                        html = noDataHtml;
+                    } else if (tab.id === 'rahmendaten') html = refreshBtnHtml + renderRahmendaten(programme);
+                    else if (tab.id === 'trends') html = refreshBtnHtml + renderTrends(programme);
+                    else if (tab.id === 'studienbeginner') html = refreshBtnHtml + renderStudienbeginner(programme);
+                    else if (tab.id === 'anrechnungen') html = refreshBtnHtml + renderAnrechnungen(programme);
+                    else if (tab.id === 'stammdaten') html = refreshBtnHtml + renderStammdaten(programme);
+                    else if (tab.id === 'studienerfolg') html = refreshBtnHtml + renderStudienerfolg(programme);
+                    else if (tab.id === 'uebergang') html = refreshBtnHtml + renderUebergangsverhalten(programme);
+                    else if (tab.id === 'herkunft') html = refreshBtnHtml + renderHerkunftMaster(programme);
+                    else if (tab.id === 'zuzahler') html = refreshBtnHtml + renderZuzahler(programme);
+                    else if (tab.id === 'vertiefung') html = refreshBtnHtml + renderVertiefungsrichtungen(programme);
+                } catch (e) {
+                    console.error(`[Tab] Render-Fehler in ${tab.id}:`, e);
+                    html = `<div class="sections-grid"><div class="section" style="grid-column: 1/-1; text-align: center; padding: 48px 24px;"><div style="font-size: 48px; margin-bottom: 16px;">⚠️</div><h3 style="color: var(--fom-gray-600); margin-bottom: 8px;">Fehler beim Laden</h3><p style="color: var(--fom-gray-400); font-size: 14px;">${e.message}</p></div></div>`;
+                }
                 content.innerHTML = html;
                 contentContainer.appendChild(content);
                 
@@ -1495,7 +1500,8 @@
             const targetBtn = Array.from(document.querySelectorAll('.tab-button')).find(btn => btn._tabId === tabId);
             if (targetBtn) targetBtn.classList.add('active');
             document.querySelectorAll('.section-content').forEach(c => c.classList.remove('active'));
-            document.getElementById(`tab-${tabId}`).classList.add('active');
+            const _tabEl = document.getElementById(`tab-${tabId}`);
+            if (_tabEl) _tabEl.classList.add('active');
             // HSZ-Filter nur bei Trends/Studienbeginner anzeigen
             const hszGroup = document.getElementById('hszFilterGroup');
             if (hszGroup) hszGroup.style.display = HSZ_ENABLED_TABS.includes(tabId) ? '' : 'none';
