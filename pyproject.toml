@@ -19,6 +19,7 @@ dependencies = [
   "azure-identity>=1.17",
   "azure-keyvault-secrets>=4.8",
   "msal>=1.28",
+  "requests>=2.31",
 ]
 
 [project.optional-dependencies]

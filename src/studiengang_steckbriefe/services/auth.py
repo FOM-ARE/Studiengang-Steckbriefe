@@ -1,9 +1,21 @@
 """Entra ID (MSAL) Authentifizierung und Berechtigungspruefung."""
 
+import logging
+
 import msal
+import requests
 from flask import current_app, session
 
 from studiengang_steckbriefe.services import mariadb_connector
+
+logger = logging.getLogger(__name__)
+
+# Mapping: AD-Gruppenname → App-Rolle
+GROUP_ROLE_MAPPING = {
+    "StudiengangSteckbriefeAdmin": "admin",
+    "StudiengangSteckbriefeWrite": "write",
+    "StudiengangSteckbriefeRead": "read",
+}
 
 
 class EntraIdAuth:
@@ -14,7 +26,7 @@ class EntraIdAuth:
         self._client_secret = app.config["ENTRA_CLIENT_SECRET"]
         self._authority = app.config["ENTRA_AUTHORITY"]
         self._redirect_uri = app.config["ENTRA_REDIRECT_URI"]
-        self._scope = ["User.Read"]
+        self._scope = ["User.Read", "GroupMember.Read.All"]
         self._msal_app = msal.ConfidentialClientApplication(
             self._client_id,
             authority=self._authority,
@@ -46,7 +58,53 @@ class EntraIdAuth:
 
 
 # ═══════════════════════════════════════
-# Berechtigungspruefung (DB-basiert)
+# Berechtigungspruefung (Gruppen-basiert via Graph API)
+# ═══════════════════════════════════════
+
+
+def get_role_from_groups(access_token: str) -> str | None:
+    """Fragt die Gruppenzugehoerigkeit via Microsoft Graph API ab.
+
+    Args:
+        access_token: Das Access Token aus dem Auth Code Flow.
+
+    Returns:
+        Die hoechste Rolle basierend auf AD-Gruppen oder None.
+    """
+    role_hierarchy = {"admin": 3, "write": 2, "read": 1}
+    try:
+        resp = requests.get(
+            "https://graph.microsoft.com/v1.0/me/memberOf?$select=displayName&$top=200",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            logger.warning(
+                "Graph API /me/memberOf fehlgeschlagen: %s %s",
+                resp.status_code,
+                resp.text[:200],
+            )
+            return None
+
+        groups = resp.json().get("value", [])
+        max_level = 0
+        max_role = None
+        for group in groups:
+            name = group.get("displayName", "")
+            role = GROUP_ROLE_MAPPING.get(name)
+            if role:
+                level = role_hierarchy.get(role, 0)
+                if level > max_level:
+                    max_level = level
+                    max_role = role
+        return max_role
+    except Exception as exc:
+        logger.warning("Graph API Gruppenabfrage fehlgeschlagen: %s", exc)
+        return None
+
+
+# ═══════════════════════════════════════
+# Berechtigungspruefung (DB-basiert, Fallback)
 # ═══════════════════════════════════════
 
 
