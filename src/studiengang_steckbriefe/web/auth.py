@@ -104,10 +104,6 @@ def callback():
         "email": claims.get("preferred_username", ""),
         "role": role,
     }
-    # Debug: Alle Token-Claims speichern (fuer Entra ID Groups-Test)
-    session["_debug_claims"] = {
-        k: v for k, v in claims.items() if isinstance(v, (str, int, float, bool, list))
-    }
 
     return redirect(url_for("main.index"))
 

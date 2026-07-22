@@ -54,20 +54,3 @@ def debug_config():
         pk_mapping_count=len(config_db.PK_MAPPING),
         offene_hochschule_gruende_count=len(config_db.OFFENE_HOCHSCHULE_GRUENDE),
     )
-
-
-@debug_bp.route("/api/debug/token-claims")
-@login_required
-def debug_token_claims():
-    """Zeigt die Entra ID Token-Claims des aktuellen Users (fuer Groups-Test)."""
-    from flask import session
-
-    claims = session.get("_debug_claims", {})
-    has_groups = "groups" in claims
-    return jsonify(
-        success=True,
-        has_groups_claim=has_groups,
-        groups=claims.get("groups", []),
-        all_claim_keys=sorted(claims.keys()),
-        claims=claims,
-    )
