@@ -1501,6 +1501,31 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
     keine_pct = round(keine_abs / total * 100, 1)
     offene_hs_pct = beruflich_pct  # Offene Hochschule = berufliche Qualifikation
 
+    # Top-10 angerechnete Module aus t_pruefungsergebnisse
+    sql_top = f"""
+        SELECT TOP 10
+            mb.Bezeichnung AS Name,
+            COUNT(DISTINCT n.StudienEintragFID) AS Cnt
+        FROM BCW_DWH.dwh.Noten n
+            INNER JOIN BCW_DWH.dwh.StudienEintraege se
+                ON se.StudienEintragID = n.StudienEintragFID
+            INNER JOIN BCW_DWH.dwh.Lehrgaenge l
+                ON l.LehrgangsID = se.LehrgangsFID
+            INNER JOIN BCW_STA.mariadb.t_pruefungsergebnisse pe
+                ON pe.PruefungsErgebnisID = n.PruefungsErgebnisFID
+            INNER JOIN BCW_STA.mariadb.t_modulbeschreibung mb
+                ON mb.ModulID = n.ModulFID
+        WHERE l.Produktkuerzel IN ({pk_placeholders})
+          AND l.Institut = 'FOM'
+          AND l.Ausrichtung = 'national'
+          AND l.Hochschulzentrum NOT IN ({config_db.EXCLUDED_HSZ_SQL})
+          AND pe.Anerkannt = 'J'
+          AND se.ImmatrikulationsDatum < se.ExmatrikulationsDatum
+        GROUP BY mb.Bezeichnung
+        ORDER BY COUNT(DISTINCT n.StudienEintragFID) DESC
+    """
+    top_module_rows = query_db(sql_top, variants)
+
     data = {
         "total_population": total,
         "mit_anrechnung": mit_anrechnung,
@@ -1514,7 +1539,7 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
         "hs_ber_pct": hs_ber_pct,
         "keine_pct": keine_pct,
         "offene_hochschule_pct": offene_hs_pct,
-        "top_module": [],
+        "top_module": [{"name": r["Name"], "anzahl": int(r["Cnt"])} for r in top_module_rows],
     }
     cache_set(cache_key, data)
     return data
