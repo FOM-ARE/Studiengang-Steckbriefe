@@ -16,7 +16,7 @@ def get_users():
 
     app_name = current_app.config["APP_NAME"]
     rows = mariadb_connector.query(
-        "SELECT Id, Berechtigt, Recht, Typ, DisplayName, Aktiv "
+        "SELECT Id, Berechtigt, Recht, Typ, Aktiv "
         "FROM t_app_berechtigungen WHERE App = %s ORDER BY Recht, Berechtigt",
         (app_name,),
     )
