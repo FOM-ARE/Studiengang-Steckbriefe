@@ -1191,10 +1191,9 @@ def get_zuzahler(produktkuerzel: str) -> dict:
 
     data = {
         "semester": semester_labels,
-        "sg_gesamt": sg_gesamt,
-        "sg_zuzahler": sg_zuzahler,
-        "sg_pct": sg_pct,
-        "fom_pct": fom_pct,
+        "absolut": sg_zuzahler,
+        "pct_sg": sg_pct,
+        "pct_fom": fom_pct,
     }
     cache_set(cache_key, data)
     return data
@@ -1509,7 +1508,10 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
                                     THEN StudienEintragID END) AS Keine
             FROM #gs_anr
         """)
-        s = dict(zip([c[0] for c in cursor.description], cursor.fetchone(), strict=False))
+        row = cursor.fetchone()
+        if row is None:
+            row = (0, 0, 0, 0, 0)
+        s = dict(zip([c[0] for c in cursor.description], row, strict=False))
         total = max(int(s.get("Total", 0) or 0), 1)
         mit_anrechnung = int(s.get("MitAnrechnung", 0) or 0)
         anteil_pct = round(mit_anrechnung / total * 100, 1)
