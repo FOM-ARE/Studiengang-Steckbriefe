@@ -1194,6 +1194,8 @@ def get_zuzahler(produktkuerzel: str) -> dict:
         "absolut": sg_zuzahler,
         "pct_sg": sg_pct,
         "pct_fom": fom_pct,
+        "top10": [],
+        "gesamtergebnis": sg_zuzahler,
     }
     cache_set(cache_key, data)
     return data
