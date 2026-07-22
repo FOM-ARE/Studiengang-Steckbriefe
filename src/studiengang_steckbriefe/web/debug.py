@@ -1,7 +1,8 @@
 """Debug-Blueprint: Diagnose-Endpoints (nur fuer eingeloggte User)."""
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, current_app, jsonify
 
+from studiengang_steckbriefe.services import config_db
 from studiengang_steckbriefe.services.db_connector import query_db
 from studiengang_steckbriefe.web.auth import login_required
 
@@ -37,3 +38,19 @@ def debug_produktkuerzel():
         return jsonify(success=True, data=rows)
     except Exception as e:
         return jsonify(success=False, error=str(e)), 500
+
+
+@debug_bp.route("/api/debug/config")
+@login_required
+def debug_config():
+    """Zeigt den aktuellen Zustand der geladenen Konfiguration."""
+    return jsonify(
+        success=True,
+        db_init_error=current_app.config.get("DB_INIT_ERROR"),
+        hsb_config_count=len(config_db.HSB_CONFIG),
+        hsb_config_keys=sorted(config_db.HSB_CONFIG.keys()),
+        hsb_exclude_kuerzel=config_db.HSB_EXCLUDE_KUERZEL,
+        excluded_hsz_count=len(config_db.EXCLUDED_HSZ),
+        pk_mapping_count=len(config_db.PK_MAPPING),
+        offene_hochschule_gruende_count=len(config_db.OFFENE_HOCHSCHULE_GRUENDE),
+    )
