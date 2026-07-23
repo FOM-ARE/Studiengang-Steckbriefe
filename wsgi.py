@@ -1,5 +1,6 @@
 """Einstiegspunkt fuer die Studiengang-Steckbriefe Anwendung."""
 
+import json
 import logging
 import os
 import sys
@@ -33,28 +34,29 @@ except Exception:
     _startup_error = traceback.format_exc()
     logger.critical("FATAL: App konnte nicht gestartet werden:\n%s", _startup_error)
 
-    # Minimaler Fallback-Server damit der Container nicht crasht
+    # Minimaler WSGI-Fallback (kein Flask) damit der Container nicht crasht
     # und der Fehler ueber /api/health abrufbar ist.
-    # Alle Endpoints sind GET-only und aendern keinen Zustand –
-    # CSRF-Schutz ist fuer diese read-only Fehler-Endpoints nicht erforderlich.
-    from flask import Flask, jsonify
+    _error_payload = json.dumps(
+        {
+            "status": "error",
+            "stage": "startup",
+            "flask_config": config_name,
+            "traceback": _startup_error,
+        }
+    ).encode("utf-8")
+    _generic_payload = json.dumps({"status": "error", "message": "App startup failed"}).encode(
+        "utf-8"
+    )
 
-    app = Flask(__name__)  # NOSONAR: S4502 – GET-only error endpoints, no CSRF risk
-    _error_msg = _startup_error
-
-    @app.route("/api/health", methods=["GET"])
-    def health_fallback():
-        return jsonify(
-            status="error",
-            stage="startup",
-            flask_config=config_name,
-            traceback=_error_msg,
-        ), 503
-
-    @app.route("/", defaults={"path": ""}, methods=["GET"])
-    @app.route("/<path:path>", methods=["GET"])
-    def catch_all(path):
-        return jsonify(status="error", message="App startup failed", traceback=_error_msg), 503
+    def app(environ, start_response):  # type: ignore[misc]
+        path = environ.get("PATH_INFO", "")
+        body = _error_payload if path == "/api/health" else _generic_payload
+        headers = [
+            ("Content-Type", "application/json"),
+            ("Content-Length", str(len(body))),
+        ]
+        start_response("503 Service Unavailable", headers)
+        return [body]
 
 
 if __name__ == "__main__":
@@ -63,4 +65,6 @@ if __name__ == "__main__":
 
         serve(app, host="0.0.0.0", port=8080)
     else:
-        app.run(host="0.0.0.0", port=5000, debug=True)
+        from werkzeug.serving import run_simple
+
+        run_simple("0.0.0.0", 5000, app, use_reloader=False, use_debugger=False)
