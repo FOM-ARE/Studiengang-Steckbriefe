@@ -784,6 +784,27 @@ def _dedup_uebergang(rows: list[dict]) -> list[dict]:
     return result
 
 
+def _best_row_per_person(kohorte_rows: list[dict]) -> dict:
+    """Waehlt pro Person den besten Eintrag (frueheste Master-Einschreibung)."""
+    persons: dict = {}
+    for r in kohorte_rows:
+        pid = r.get("PersonenFID")
+        if pid not in persons:
+            persons[pid] = r
+            continue
+        ex = persons[pid]
+        ex_m = ex.get("M_PK")
+        r_m = r.get("M_PK")
+        if not ex_m and r_m:
+            persons[pid] = r
+        elif ex_m and r_m:
+            ex_im = ex.get("M_ImDatum")
+            r_im = r.get("M_ImDatum")
+            if r_im and ex_im and r_im < ex_im:
+                persons[pid] = r
+    return persons
+
+
 def _compute_uebergang_stats(rows: list[dict], kohorten_set: list[str]) -> tuple[dict, dict]:
     """Berechnet detaillierte Uebergangs-Statistiken pro Kohorte."""
     per_kohorte: dict = {}
@@ -791,24 +812,7 @@ def _compute_uebergang_stats(rows: list[dict], kohorten_set: list[str]) -> tuple
 
     for kohorte in kohorten_set:
         kohorte_rows = [r for r in rows if str(r.get("B_Kohorte")) == kohorte]
-
-        # Pro Person: besten Eintrag bestimmen (frueheste Master-Einschreibung)
-        persons: dict = {}
-        for r in kohorte_rows:
-            pid = r.get("PersonenFID")
-            if pid not in persons:
-                persons[pid] = r
-            else:
-                ex = persons[pid]
-                ex_m = ex.get("M_PK")
-                r_m = r.get("M_PK")
-                if not ex_m and r_m:
-                    persons[pid] = r
-                elif ex_m and r_m:
-                    ex_im = ex.get("M_ImDatum")
-                    r_im = r.get("M_ImDatum")
-                    if r_im and ex_im and r_im < ex_im:
-                        persons[pid] = r
+        persons = _best_row_per_person(kohorte_rows)
 
         total = len(persons) or 1
         counts = {k: 0 for k in _UEBERGANG_KATEGORIEN}
@@ -956,14 +960,16 @@ def get_uebergang(produktkuerzel: str) -> dict:
         "im Folgesem.",
         "nach Pause",
     ]
+    _GRP_AM_JETZIGEN = "am jetzigen HSZ"
+    _GRP_AN_ANDEREM = "an anderem HSZ"
     uebersicht_gruppen = [
         None,
-        "am jetzigen HSZ",
-        "am jetzigen HSZ",
-        "am jetzigen HSZ",
-        "an anderem HSZ",
-        "an anderem HSZ",
-        "an anderem HSZ",
+        _GRP_AM_JETZIGEN,
+        _GRP_AM_JETZIGEN,
+        _GRP_AM_JETZIGEN,
+        _GRP_AN_ANDEREM,
+        _GRP_AN_ANDEREM,
+        _GRP_AN_ANDEREM,
     ]
 
     fom_avg = _get_fom_uebergang_avg()

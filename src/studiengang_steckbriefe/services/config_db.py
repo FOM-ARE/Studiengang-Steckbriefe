@@ -6,6 +6,9 @@ Kann ueber reload_config() neu geladen werden.
 
 from studiengang_steckbriefe.services import mariadb_connector
 
+# SQL-Platzhalter fuer leere IN-Listen (verhindert Syntaxfehler)
+_SQL_NONE: str = "'__NONE__'"
+
 # ═══════════════════════════════════════
 # Fallback-Defaults (wenn DB leer ist)
 # ═══════════════════════════════════════
@@ -92,7 +95,7 @@ HSB_ORDER: dict[str, int] = {}
 
 # Excluded Hochschulzentren
 EXCLUDED_HSZ: list[str] = []
-EXCLUDED_HSZ_SQL: str = "'__NONE__'"
+EXCLUDED_HSZ_SQL: str = _SQL_NONE
 
 # Anrechnung-Regeln
 ANRECHNUNG_REGELN: dict[str, list[dict]] = {}
@@ -108,11 +111,11 @@ PK_CASE_SQL: str = ""
 
 # Offene-Hochschule-Gruende
 OFFENE_HOCHSCHULE_GRUENDE: list[str] = []
-OFFENE_HOCHSCHULE_SQL: str = "'__NONE__'"
+OFFENE_HOCHSCHULE_SQL: str = _SQL_NONE
 
 # HSB-Exclude-Kuerzel
 HSB_EXCLUDE_KUERZEL: list[str] = []
-HSB_EXCLUDE_SQL: str = "'__NONE__'"
+HSB_EXCLUDE_SQL: str = _SQL_NONE
 
 
 def _build_pk_case_sql(alias: str = "l") -> str:
@@ -202,7 +205,7 @@ def reload_config():
     if not EXCLUDED_HSZ:
         EXCLUDED_HSZ = list(_DEFAULT_EXCLUDED_HSZ)
         print("[Config] EXCLUDED_HSZ leer – Fallback-Defaults werden verwendet.")
-    EXCLUDED_HSZ_SQL = ",".join(f"'{h}'" for h in EXCLUDED_HSZ) if EXCLUDED_HSZ else "'__NONE__'"
+    EXCLUDED_HSZ_SQL = ",".join(f"'{h}'" for h in EXCLUDED_HSZ) if EXCLUDED_HSZ else _SQL_NONE
 
     # 4) Anrechnung-Regeln
     rows = _safe_query(
@@ -231,7 +234,7 @@ def reload_config():
     OFFENE_HOCHSCHULE_SQL = (
         ",".join(f"'{g}'" for g in OFFENE_HOCHSCHULE_GRUENDE)
         if OFFENE_HOCHSCHULE_GRUENDE
-        else "'__NONE__'"
+        else _SQL_NONE
     )
 
     # 5) Endpoint-Parameter
@@ -260,7 +263,7 @@ def reload_config():
         HSB_EXCLUDE_KUERZEL = list(_DEFAULT_HSB_EXCLUDE)
         print("[Config] HSB_EXCLUDE_KUERZEL leer – Fallback-Defaults werden verwendet.")
     HSB_EXCLUDE_SQL = (
-        ",".join(f"'{k}'" for k in HSB_EXCLUDE_KUERZEL) if HSB_EXCLUDE_KUERZEL else "'__NONE__'"
+        ",".join(f"'{k}'" for k in HSB_EXCLUDE_KUERZEL) if HSB_EXCLUDE_KUERZEL else _SQL_NONE
     )
 
     # 7) PK-CASE SQL-Fragmente
@@ -297,5 +300,5 @@ def get_filter_sql(bereich: str) -> str:
     """Gibt eine komma-separierte SQL-Liste der Filterwerte zurueck."""
     values = get_filter_values(bereich)
     if not values:
-        return "'__NONE__'"
+        return _SQL_NONE
     return ",".join(f"'{v}'" for v in values)
