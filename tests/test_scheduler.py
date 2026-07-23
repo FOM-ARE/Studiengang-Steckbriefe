@@ -20,7 +20,10 @@ def stop_after_test():
 
 class TestScheduledCacheReload:
     def test_leert_cache(self):
-        with patch("studiengang_steckbriefe.services.scheduler.cache_clear") as mock_clear:
+        with (
+            patch("studiengang_steckbriefe.services.scheduler.cache_clear") as mock_clear,
+            patch("studiengang_steckbriefe.services.scheduler._warmup_cache"),
+        ):
             scheduled_cache_reload()
             mock_clear.assert_called_once()
 
