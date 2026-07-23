@@ -35,14 +35,14 @@ except Exception:
 
     # Minimaler Fallback-Server damit der Container nicht crasht
     # und der Fehler ueber /api/health abrufbar ist.
-    # Dieser Fallback-Server bietet ausschliesslich read-only Fehler-Endpoints an
-    # (kein Login, keine State-aendernden Aktionen) – CSRF-Schutz ist nicht erforderlich.
+    # Alle Endpoints sind GET-only und aendern keinen Zustand –
+    # CSRF-Schutz ist fuer diese read-only Fehler-Endpoints nicht erforderlich.
     from flask import Flask, jsonify
 
-    app = Flask(__name__)  # NOSONAR: S4502 – read-only error endpoints, no CSRF risk
+    app = Flask(__name__)  # NOSONAR: S4502 – GET-only error endpoints, no CSRF risk
     _error_msg = _startup_error
 
-    @app.route("/api/health")
+    @app.route("/api/health", methods=["GET"])
     def health_fallback():
         return jsonify(
             status="error",
@@ -51,8 +51,8 @@ except Exception:
             traceback=_error_msg,
         ), 503
 
-    @app.route("/", defaults={"path": ""})
-    @app.route("/<path:path>")
+    @app.route("/", defaults={"path": ""}, methods=["GET"])
+    @app.route("/<path:path>", methods=["GET"])
     def catch_all(path):
         return jsonify(status="error", message="App startup failed", traceback=_error_msg), 503
 
