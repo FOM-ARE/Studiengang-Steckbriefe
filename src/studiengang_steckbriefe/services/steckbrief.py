@@ -1399,6 +1399,7 @@ def get_rahmendaten(produktkuerzel: str) -> dict:
             ue_by_semester[sem_key][typ] = ue_by_semester[sem_key].get(typ, 0) + val
     except Exception as exc:
         import traceback
+
         print(f"[UE-Fehler] {produktkuerzel}: {exc}")
         traceback.print_exc()
 

@@ -11,19 +11,53 @@ from studiengang_steckbriefe.services import mariadb_connector
 # ═══════════════════════════════════════
 
 _DEFAULT_HSB_CONFIG: dict[str, dict] = {
-    "WM":  {"hsb_code": "WM",  "hsb_name": "Wirtschaft & Management",       "icon": "💼", "farbe_hex": "#00534A", "sort_order": 1},
-    "GuS": {"hsb_code": "GuS", "hsb_name": "Gesundheit & Soziales",          "icon": "🏥", "farbe_hex": "#6B1B4B", "sort_order": 2},
-    "WP":  {"hsb_code": "WP",  "hsb_name": "Wirtschaftspsychologie",         "icon": "🧠", "farbe_hex": "#D04931", "sort_order": 3},
-    "IT":  {"hsb_code": "IT",  "hsb_name": "Informatik & Digitalisierung",   "icon": "💻", "farbe_hex": "#00B3F0", "sort_order": 4},
-    "WR":  {"hsb_code": "WR",  "hsb_name": "Wirtschaftsrecht",               "icon": "⚖️", "farbe_hex": "#D09910", "sort_order": 5},
-    "Ing": {"hsb_code": "Ing", "hsb_name": "Ingenieurwesen",                 "icon": "🔧", "farbe_hex": "#007C91", "sort_order": 6},
+    "WM": {
+        "hsb_code": "WM",
+        "hsb_name": "Wirtschaft & Management",
+        "icon": "💼",
+        "farbe_hex": "#00534A",
+        "sort_order": 1,
+    },
+    "GuS": {
+        "hsb_code": "GuS",
+        "hsb_name": "Gesundheit & Soziales",
+        "icon": "🏥",
+        "farbe_hex": "#6B1B4B",
+        "sort_order": 2,
+    },
+    "WP": {
+        "hsb_code": "WP",
+        "hsb_name": "Wirtschaftspsychologie",
+        "icon": "🧠",
+        "farbe_hex": "#D04931",
+        "sort_order": 3,
+    },
+    "IT": {
+        "hsb_code": "IT",
+        "hsb_name": "Informatik & Digitalisierung",
+        "icon": "💻",
+        "farbe_hex": "#00B3F0",
+        "sort_order": 4,
+    },
+    "WR": {
+        "hsb_code": "WR",
+        "hsb_name": "Wirtschaftsrecht",
+        "icon": "⚖️",
+        "farbe_hex": "#D09910",
+        "sort_order": 5,
+    },
+    "Ing": {
+        "hsb_code": "Ing",
+        "hsb_name": "Ingenieurwesen",
+        "icon": "🔧",
+        "farbe_hex": "#007C91",
+        "sort_order": 6,
+    },
 }
 
 _DEFAULT_HSB_EXCLUDE: list[str] = ["eufom BS", "OBS", ""]
 
-_DEFAULT_EXCLUDED_HSZ: list[str] = [
-    "Bangalore", "Pune", "Ahmedabad", "Sofia", "Venlo", "Luxemburg"
-]
+_DEFAULT_EXCLUDED_HSZ: list[str] = ["Bangalore", "Pune", "Ahmedabad", "Sofia", "Venlo", "Luxemburg"]
 
 _DEFAULT_FILTERLISTE: dict[str, list[str]] = {
     "HSB_EXCLUDE": ["eufom BS", "OBS", ""],
