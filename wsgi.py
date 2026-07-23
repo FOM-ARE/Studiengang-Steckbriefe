@@ -34,10 +34,12 @@ except Exception:
     logger.critical("FATAL: App konnte nicht gestartet werden:\n%s", _startup_error)
 
     # Minimaler Fallback-Server damit der Container nicht crasht
-    # und der Fehler ueber /api/health abrufbar ist
+    # und der Fehler ueber /api/health abrufbar ist.
+    # Dieser Fallback-Server bietet ausschliesslich read-only Fehler-Endpoints an
+    # (kein Login, keine State-aendernden Aktionen) – CSRF-Schutz ist nicht erforderlich.
     from flask import Flask, jsonify
 
-    app = Flask(__name__)
+    app = Flask(__name__)  # NOSONAR: S4502 – read-only error endpoints, no CSRF risk
     _error_msg = _startup_error
 
     @app.route("/api/health")
