@@ -11,13 +11,27 @@ from studiengang_steckbriefe.services.cache import cache_clear
 
 _stop_event: threading.Event | None = None
 _scheduler_thread: threading.Thread | None = None
+_flask_app = None
+
+
+def _warmup_cache() -> None:
+    """Befuellt den Cache mit den Studiengaengen (Startseite)."""
+    from studiengang_steckbriefe.services.steckbrief import get_studiengaenge
+
+    with _flask_app.app_context():
+        try:
+            data = get_studiengaenge()
+            print(f"[Scheduler] Cache-Warmup: {len(data)} Hochschulbereiche geladen.")
+        except Exception as exc:
+            print(f"[Scheduler] Cache-Warmup fehlgeschlagen: {exc}")
 
 
 def scheduled_cache_reload() -> None:
-    """Leert den Cache (wird vom Scheduler taeglich aufgerufen)."""
+    """Leert den Cache und befuellt ihn neu (wird vom Scheduler taeglich aufgerufen)."""
     print("[Scheduler] Cache-Reload gestartet...")
     cache_clear()
     print("[Scheduler] Cache geleert.")
+    _warmup_cache()
 
 
 def _run_scheduler(stop_event: threading.Event) -> None:
@@ -38,7 +52,8 @@ def _run_scheduler(stop_event: threading.Event) -> None:
 
 def init_scheduler(app) -> None:
     """Startet den Hintergrund-Thread fuer taegliche Cache-Reloads um 05:30."""
-    global _stop_event, _scheduler_thread
+    global _stop_event, _scheduler_thread, _flask_app
+    _flask_app = app
     _stop_event = threading.Event()
     _scheduler_thread = threading.Thread(
         target=_run_scheduler,

@@ -22,11 +22,9 @@ def get_connection():
         if ca_path:
             ssl_ctx = ssl.create_default_context(cafile=ca_path)
         else:
-            # Internes Self-Signed-Zertifikat: Verschluesselung aktiv,
-            # aber keine Zertifikatsvalidierung (kein CA verfuegbar).
+            # Kein explizites CA-Zertifikat: System-Trust-Store verwenden.
+            # Fuer Self-Signed-Certs: DB_SSL_CA auf den CA-Pfad setzen.
             ssl_ctx = ssl.create_default_context()
-            ssl_ctx.check_hostname = False  # NOSONAR – Self-Signed intern
-            ssl_ctx.verify_mode = ssl.CERT_NONE  # NOSONAR – Self-Signed intern
         kwargs["ssl"] = ssl_ctx
 
     return pymysql.connect(**kwargs)
