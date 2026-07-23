@@ -1397,8 +1397,10 @@ def get_rahmendaten(produktkuerzel: str) -> dict:
             ue[typ] = ue.get(typ, 0) + val
             ue_by_semester.setdefault(sem_key, {})
             ue_by_semester[sem_key][typ] = ue_by_semester[sem_key].get(typ, 0) + val
-    except Exception:
-        pass
+    except Exception as exc:
+        import traceback
+        print(f"[UE-Fehler] {produktkuerzel}: {exc}")
+        traceback.print_exc()
 
     # Dekan + Akkreditierung aus Excel-Mapping (falls vorhanden)
     dekan = ""
@@ -1545,12 +1547,41 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
     offene_hs_pct = beruflich_pct  # Offene Hochschule = berufliche Qualifikation
 
     # Top-10 angerechnete Module: alte Quelle (pe.Anerkannt) + neue Quelle (ErgebnisModule)
+    # Eingeschraenkt auf Population (Beginner/Quereinsteiger mit UV, letzte Semester)
     sql_top = f"""
+        WITH gs_pop AS (
+            SELECT DISTINCT se.StudienEintragID
+            FROM BCW_DWH.dwh.StudierendenStatusJeSemester sz
+                INNER JOIN BCW_DWH.dwh.StudienEintraege se
+                    ON se.StudienEintragID = sz.StudienEintragFID
+                INNER JOIN BCW_DWH.dwh.Lehrgaenge l
+                    ON l.LehrgangsID = se.LehrgangsFID
+                INNER JOIN BCW_DWH.dwh.StatusGruppen sg
+                    ON sg.Status = sz.Status
+            WHERE sg.StatusGruppe IN (
+                    '{config_db.get_param("anrechnungen", "statusgruppe_1", "Beginner mit UV")}',
+                    '{config_db.get_param("anrechnungen", "statusgruppe_2", "Quereinsteiger mit UV")}')
+              AND sz.Semesterkuerzel >= CONCAT(
+                  YEAR(GETDATE()) - {config_db.get_param_int("anrechnungen", "semester_zurueck", 6)},
+                  CASE WHEN MONTH(GETDATE()) >= 9 THEN '-WS'
+                       WHEN MONTH(GETDATE()) >= 3 THEN '-SS'
+                       ELSE '-WS' END)
+              AND sz.Semesterkuerzel <= CASE
+                  WHEN MONTH(GETDATE()) >= 9 THEN CONCAT(YEAR(GETDATE()), '-WS')
+                  WHEN MONTH(GETDATE()) >= 3 THEN CONCAT(YEAR(GETDATE()), '-SS')
+                  ELSE CONCAT(YEAR(GETDATE())-1, '-WS')
+              END
+              AND se.ImmatrikulationsDatum IS NOT NULL
+              AND l.Hochschulzentrum NOT IN ({config_db.EXCLUDED_HSZ_SQL})
+              AND l.Ausrichtung = 'national'
+              AND l.Produktkuerzel IN ({pk_placeholders})
+        )
         SELECT TOP 10 Name, SUM(Cnt) AS Cnt FROM (
             SELECT
                 mb.Bezeichnung AS Name,
                 COUNT(DISTINCT n.StudienEintragFID) AS Cnt
             FROM BCW_DWH.dwh.Noten n
+                INNER JOIN gs_pop gs ON gs.StudienEintragID = n.StudienEintragFID
                 INNER JOIN BCW_DWH.dwh.StudienEintraege se
                     ON se.StudienEintragID = n.StudienEintragFID
                 INNER JOIN BCW_DWH.dwh.Lehrgaenge l
@@ -1573,6 +1604,7 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
                 em.ModulName AS Name,
                 COUNT(DISTINCT atn.StnId) AS Cnt
             FROM BCW_STA.mariadb.Anrechnung_AntragTN atn
+                INNER JOIN gs_pop gs ON gs.StudienEintragID = atn.StnId
                 INNER JOIN BCW_DWH.dwh.StudienEintraege se
                     ON se.StudienEintragID = atn.StnId
                 INNER JOIN BCW_DWH.dwh.Lehrgaenge l
@@ -1599,7 +1631,7 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
         GROUP BY Name
         ORDER BY SUM(Cnt) DESC
     """
-    top_module_rows = query_db(sql_top, variants + variants)
+    top_module_rows = query_db(sql_top, variants + variants + variants)
 
     data = {
         "total_population": total,

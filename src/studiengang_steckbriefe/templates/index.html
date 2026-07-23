@@ -191,6 +191,7 @@
             width: 100%;
             height: auto;
             max-width: 80px;
+            
         }
 
         .header-text h1 {
@@ -932,7 +933,7 @@
         // ─── Datenstand anzeigen ───
         async function updateDatenstand() {
             try {
-                const res = await fetch(`${API_BASE}/cache/status`).then(r => r.json());
+                const res = await fetch(`${API_BASE}/cache/datenstand`).then(r => r.json());
                 const el = document.getElementById('datenstandText');
                 if (res.success && res.datenstand) {
                     el.textContent = `Datenstand: ${res.datenstand}`;
@@ -1203,7 +1204,7 @@
             document.getElementById('detailPage').classList.add('active');
             const header = document.getElementById('detailHeader');
             header.style.borderLeftColor = hsb.farbe;
-            header.innerHTML = `<h2>${hsb.icon} ${hsb.name}</h2><div class="sginfo"><strong>${hsb.programmes.length} Studiengänge</strong></div>`;
+            header.innerHTML = `<h2>${hsb.name}</h2><div class="sginfo"><strong>${hsb.programmes.length} Studiengänge</strong></div>`;
             // UI sofort rendern (mit Placeholder falls noch keine Daten)
             currentHSZ = 'Alle';
             renderFilterSection(hsb);
@@ -2081,7 +2082,7 @@
             const data = window._topModuleData && window._topModuleData[filter] ? window._topModuleData[filter] : [];
             if (charts.topModule) {
                 charts.topModule.data.labels = data.map(d => d.name);
-                charts.topModule.data.datasets[0].data = data.map(d => d.count);
+                charts.topModule.data.datasets[0].data = data.map(d => d.anzahl);
                 charts.topModule.update();
             }
         }
@@ -2168,7 +2169,7 @@
                     data: {
                         labels: dataM.map(d => d.name),
                         datasets: [{
-                            data: dataM.map(d => d.count),
+                            data: dataM.map(d => d.anzahl),
                             backgroundColor: 'rgba(0, 153, 138, 0.7)',
                             borderColor: '#00998a',
                             borderWidth: 1,
@@ -3363,7 +3364,7 @@
                 header.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <h1 style="font-size: 14px; color: #00998a; margin: 0 0 1px 0;">${currentHSB.icon} ${currentProgramme.name}</h1>
+                            <h1 style="font-size: 14px; color: #00998a; margin: 0 0 1px 0;">${currentProgramme.name}</h1>
                             <p style="font-size: 10px; color: #666; margin: 0;">Hochschulbereich: ${currentHSB.name} | Abschluss: ${currentProgramme.abschluss}</p>
                         </div>
                         <div style="text-align: right; font-size: 10px; color: #999;">

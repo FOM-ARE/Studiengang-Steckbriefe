@@ -10,9 +10,25 @@ from studiengang_steckbriefe.services.cache import (
     cache_status,
 )
 from studiengang_steckbriefe.services.config_db import reload_config
-from studiengang_steckbriefe.web.auth import admin_required
+from studiengang_steckbriefe.web.auth import admin_required, login_required
 
 cache_mgmt_bp = Blueprint("cache_mgmt", __name__)
+
+
+@cache_mgmt_bp.route("/api/cache/datenstand")
+@login_required
+def datenstand():
+    """Gibt den Datenstand (letzter Cache-Aufbau) zurueck – fuer alle User."""
+    import datetime
+
+    info = cache_status()
+    newest = info.get("newest")
+    if newest:
+        dt = datetime.datetime.fromtimestamp(newest)
+        text = dt.strftime("%d.%m.%Y %H:%M")
+    else:
+        text = None
+    return jsonify(success=True, datenstand=text)
 
 
 @cache_mgmt_bp.route("/api/cache/status")
