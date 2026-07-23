@@ -1445,14 +1445,15 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
     variants = expand_pk(produktkuerzel)
     pk_placeholders = ",".join("?" * len(variants))
 
-    # Haupt-Query: Population + Klassifizierung (neu + alt kombiniert)
-    # - Neue Tabelle: Anrechnung_AntragTN -> Anrechnung_Grundlage (GrundlagenTyp)
-    # - Fallback:     se.AnrechnungsGrund (fuer Eintraege ohne neuen Antrag)
+    # Haupt-Query: Population + Klassifizierung (3-stufige Logik)
+    # Quelle 1: Anrechnung_Grundlage.GrundlagenTyp (neue Logik ab Mai)
+    # Quelle 2: AntragLeistungsart + Leistungsart (aeltere Eintraege ohne Grundlage)
+    # Fallback:  pe.AnerkanntText LIKE-Suche (fuer Eintraege ohne Antrags-Daten)
     sql = f"""
         WITH gs_anr AS (
             SELECT DISTINCT
                 se.StudienEintragID,
-                se.AnrechnungsGrund
+                se.PersonenFID
             FROM BCW_DWH.dwh.StudierendenStatusJeSemester sz
                 INNER JOIN BCW_DWH.dwh.StudienEintraege se
                     ON se.StudienEintragID = sz.StudienEintragFID
@@ -1478,46 +1479,122 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
               AND l.Ausrichtung = 'national'
               AND l.Produktkuerzel IN ({pk_placeholders})
         ),
+        neu_anr_grundlage AS (
+            -- Quelle 1: Anrechnung_Grundlage.GrundlagenTyp (neue Logik ab Mai)
+            SELECT
+                atn.StnId AS StudienEintragID,
+                MAX(CASE WHEN gl.GrundlagenTyp = 'Hochschulische Leistung'
+                         THEN 1 ELSE 0 END) AS hat_hs,
+                MAX(CASE WHEN gl.GrundlagenTyp IN ('Ausbildung', 'Weiterbildung')
+                         THEN 1 ELSE 0 END) AS hat_ber
+            FROM BCW_STA.mariadb.Anrechnung_AntragTN atn
+                INNER JOIN BCW_STA.mariadb.Anrechnung_Ergebnis e
+                    ON e.AnrechnungAntragTNFid = atn.Id
+                INNER JOIN BCW_STA.mariadb.Anrechnung_ErgebnisModule em
+                    ON em.AnrechnungErgebnisFid = e.Id
+                INNER JOIN BCW_STA.mariadb.Anrechnung_Grundlage gl
+                    ON gl.AnrechnungantragTNFid = atn.Id
+            WHERE em.Anrechenbarkeit = 'angerechnet'
+            GROUP BY atn.StnId
+        ),
+        neu_anr_leistungsart AS (
+            -- Quelle 2: AntragLeistungsart + Leistungsart (aeltere Eintraege ohne Grundlage)
+            SELECT
+                gs.StudienEintragID,
+                MAX(CASE WHEN la.LeistungsArtAnzeigeName LIKE '%Hochschulische Leistung%'
+                         THEN 1 ELSE 0 END) AS hat_hs,
+                MAX(
+                    CASE
+                        WHEN la.LeistungsArtAnzeigeName LIKE '%Ausbildung%'
+                             OR la.LeistungsArtAnzeigeName LIKE '%Ausserhochschulische Leistung%'
+                        THEN 1 ELSE 0
+                    END
+                ) AS hat_ber
+            FROM gs_anr gs
+                INNER JOIN BCW_STA.mariadb.Antraege a
+                    ON a.PersonenFID = gs.PersonenFID
+                INNER JOIN BCW_STA.mariadb.AntragLeistungsart al
+                    ON al.AntragFiD = a.Id
+                INNER JOIN BCW_STA.mariadb.Leistungsart la
+                    ON al.LeistungsartFId = la.Id
+                INNER JOIN BCW_STA.mariadb.Ergebnisse erg
+                    ON erg.AnrechnungenFid = a.Id
+                LEFT JOIN BCW_DWH.dwh.Lehrgaenge l2
+                    ON erg.VerwaltungsPruefungsordnungFid = l2.POID
+            WHERE la.LeistungsArtAnzeigeName NOT IN (
+                      'Einschreibehindernispruefung', 'Kooperation')
+              AND l2.Produktkuerzel IN ({pk_placeholders})
+              AND gs.StudienEintragID NOT IN (
+                  SELECT StudienEintragID FROM neu_anr_grundlage)
+            GROUP BY gs.StudienEintragID
+        ),
         neu_anr AS (
-            SELECT DISTINCT
-                g.StudienEintragID,
+            -- Zusammenfuehren beider Quellen (Kombi-Kategorie moeglich)
+            SELECT
+                StudienEintragID,
                 CASE
-                    WHEN g.GrundlagenTyp = 'Hochschulische Leistung'
-                        THEN 'Hochschulisch'
-                    WHEN g.GrundlagenTyp IN ('Ausbildung', 'Weiterbildung')
-                        THEN 'Beruflich'
+                    WHEN hat_hs = 1 AND hat_ber = 1 THEN 'HsBer'
+                    WHEN hat_hs = 1 THEN 'Hochschulisch'
                     ELSE 'Beruflich'
                 END AS Kategorie
-            FROM (
-                SELECT DISTINCT
-                    atn.StnId AS StudienEintragID,
-                    gl.GrundlagenTyp
-                FROM BCW_STA.mariadb.Anrechnung_AntragTN atn
-                    INNER JOIN BCW_STA.mariadb.Anrechnung_Ergebnis e
-                        ON e.AnrechnungAntragTNFid = atn.Id
-                    INNER JOIN BCW_STA.mariadb.Anrechnung_ErgebnisModule em
-                        ON em.AnrechnungErgebnisFid = e.Id
-                    LEFT JOIN BCW_STA.mariadb.Anrechnung_Grundlage gl
-                        ON gl.AnrechnungantragTNFid = atn.Id
-                WHERE em.Anrechenbarkeit = 'angerechnet'
-            ) g
+            FROM neu_anr_grundlage
+            UNION ALL
+            SELECT
+                StudienEintragID,
+                CASE
+                    WHEN hat_hs = 1 AND hat_ber = 1 THEN 'HsBer'
+                    WHEN hat_hs = 1 THEN 'Hochschulisch'
+                    ELSE 'Beruflich'
+                END AS Kategorie
+            FROM neu_anr_leistungsart
+        ),
+        anr_text AS (
+            -- Fallback: AnerkanntText aus Noten (fuer Eintraege ohne Antrags-Daten)
+            SELECT
+                n.StudienEintragFID AS StudienEintragID,
+                MAX(
+                    CASE
+                        WHEN pe.AnerkanntText LIKE '%HS%'
+                             OR pe.AnerkanntText LIKE '%Auslandsstudium%'
+                             OR pe.AnerkanntText LIKE '%ERASMUS%'
+                        THEN 1 ELSE 0
+                    END
+                ) AS hat_hs,
+                MAX(
+                    CASE
+                        WHEN pe.AnerkanntText NOT LIKE '%HS%'
+                             AND pe.AnerkanntText NOT LIKE '%Auslandsstudium%'
+                             AND pe.AnerkanntText NOT LIKE '%ERASMUS%'
+                        THEN 1 ELSE 0
+                    END
+                ) AS hat_ber
+            FROM BCW_DWH.dwh.Noten n
+                INNER JOIN BCW_STA.mariadb.t_pruefungsergebnisse pe
+                    ON pe.PruefungsErgebnisID = n.PruefungsErgebnisFID
+                INNER JOIN gs_anr gs
+                    ON gs.StudienEintragID = n.StudienEintragFID
+            WHERE pe.Anerkannt NOT IN ('N', 'Z')
+              AND pe.AnerkanntText IS NOT NULL
+              AND LTRIM(RTRIM(pe.AnerkanntText)) <> ''
+            GROUP BY n.StudienEintragFID
         ),
         klassifiziert AS (
             SELECT
                 gs.StudienEintragID,
                 CASE
                     WHEN na.StudienEintragID IS NOT NULL THEN na.Kategorie
-                    WHEN gs.AnrechnungsGrund IS NOT NULL
-                         AND LTRIM(RTRIM(gs.AnrechnungsGrund)) <> ''
-                         AND gs.AnrechnungsGrund IN ({config_db.OFFENE_HOCHSCHULE_SQL})
-                        THEN 'Beruflich'
-                    WHEN gs.AnrechnungsGrund IS NOT NULL
-                         AND LTRIM(RTRIM(gs.AnrechnungsGrund)) <> ''
-                        THEN 'Hochschulisch'
+                    WHEN anrt.StudienEintragID IS NOT NULL THEN
+                        CASE
+                            WHEN anrt.hat_hs = 1 AND anrt.hat_ber = 1 THEN 'HsBer'
+                            WHEN anrt.hat_hs = 1 THEN 'Hochschulisch'
+                            WHEN anrt.hat_ber = 1 THEN 'Beruflich'
+                            ELSE 'Keine'
+                        END
                     ELSE 'Keine'
                 END AS Kategorie
             FROM gs_anr gs
                 LEFT JOIN neu_anr na ON na.StudienEintragID = gs.StudienEintragID
+                LEFT JOIN anr_text anrt ON anrt.StudienEintragID = gs.StudienEintragID
         )
         SELECT
             COUNT(DISTINCT StudienEintragID) AS Total,
@@ -1527,23 +1604,25 @@ def get_anrechnungen(produktkuerzel: str) -> dict:
                                 THEN StudienEintragID END) AS Beruflich,
             COUNT(DISTINCT CASE WHEN Kategorie = 'Hochschulisch'
                                 THEN StudienEintragID END) AS Hochschulisch,
+            COUNT(DISTINCT CASE WHEN Kategorie = 'HsBer'
+                                THEN StudienEintragID END) AS HsBer,
             COUNT(DISTINCT CASE WHEN Kategorie = 'Keine'
                                 THEN StudienEintragID END) AS Keine
         FROM klassifiziert
     """
 
-    rows = query_db(sql, variants)
+    rows = query_db(sql, variants + variants)
     s = rows[0] if rows else {}
     total = max(int(s.get("Total", 0) or 0), 1)
     mit_anrechnung = int(s.get("MitAnrechnung", 0) or 0)
     anteil_pct = round(mit_anrechnung / total * 100, 1)
     beruflich_abs = int(s.get("Beruflich", 0) or 0)
     hochschulisch_abs = int(s.get("Hochschulisch", 0) or 0)
-    hs_ber_abs = 0
+    hs_ber_abs = int(s.get("HsBer", 0) or 0)
     keine_abs = int(s.get("Keine", 0) or 0)
     hochschulisch_pct = round(hochschulisch_abs / total * 100, 1)
     beruflich_pct = round(beruflich_abs / total * 100, 1)
-    hs_ber_pct = 0.0
+    hs_ber_pct = round(hs_ber_abs / total * 100, 1)
     keine_pct = round(keine_abs / total * 100, 1)
     offene_hs_pct = beruflich_pct  # Offene Hochschule = berufliche Qualifikation
 
