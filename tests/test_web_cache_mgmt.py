@@ -105,9 +105,16 @@ class TestPreload:
 
         mock_hsbs = [{"programmes": [{"produktkuerzel": "WM"}, {"produktkuerzel": "WI"}]}]
         endpoint_fns = [
-            "get_trends", "get_stammdaten", "get_studienerfolg", "get_uebergang",
-            "get_herkunft", "get_zuzahler", "get_vertiefungsrichtungen",
-            "get_rahmendaten", "get_aktive_hszen", "get_anrechnungen",
+            "get_trends",
+            "get_stammdaten",
+            "get_studienerfolg",
+            "get_uebergang",
+            "get_herkunft",
+            "get_zuzahler",
+            "get_vertiefungsrichtungen",
+            "get_rahmendaten",
+            "get_aktive_hszen",
+            "get_anrechnungen",
         ]
         with patch(
             "studiengang_steckbriefe.services.steckbrief.get_studiengaenge",

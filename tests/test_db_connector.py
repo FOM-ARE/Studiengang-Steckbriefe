@@ -1,4 +1,4 @@
-﻿"""Tests fuer services/db_connector.py."""
+"""Tests fuer services/db_connector.py."""
 
 import queue
 from unittest.mock import MagicMock, patch
@@ -207,10 +207,12 @@ class TestQueryDbMulti:
 
         with patch.object(db_connector, "get_connection", return_value=mock_conn):
             with patch.object(db_connector, "release_connection"):
-                result = db_connector.query_db_multi([
-                    ("SELECT x FROM a", None),
-                    ("SELECT x FROM b", (1,)),
-                ])
+                result = db_connector.query_db_multi(
+                    [
+                        ("SELECT x FROM a", None),
+                        ("SELECT x FROM b", (1,)),
+                    ]
+                )
 
         assert result == [[{"x": 1}], [{"x": 2}]]
 

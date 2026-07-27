@@ -105,7 +105,9 @@ def test_callback_keine_rolle_redirect(client):
         "id_token_claims": {"preferred_username": "no.role@fom.de", "name": "No Role"}
     }
     with patch("studiengang_steckbriefe.web.auth.EntraIdAuth", return_value=mock_auth):
-        with patch("studiengang_steckbriefe.web.auth.get_role_from_token_claims", return_value=None):
+        with patch(
+            "studiengang_steckbriefe.web.auth.get_role_from_token_claims", return_value=None
+        ):
             with patch("studiengang_steckbriefe.web.auth.get_user_role", return_value=None):
                 response = client.get("/auth/callback?state=state-abc&code=xyz")
     assert response.status_code == 302
@@ -151,9 +153,7 @@ def test_callback_erfolgreicher_login_via_db_fallback(client):
         with patch(
             "studiengang_steckbriefe.web.auth.get_role_from_token_claims", return_value=None
         ):
-            with patch(
-                "studiengang_steckbriefe.web.auth.get_user_role", return_value="read"
-            ):
+            with patch("studiengang_steckbriefe.web.auth.get_user_role", return_value="read"):
                 response = client.get("/auth/callback?state=state-abc&code=xyz")
     assert response.status_code == 302
     with client.session_transaction() as sess:

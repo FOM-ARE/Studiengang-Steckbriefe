@@ -1,4 +1,4 @@
-﻿"""Tests fuer services/config_db.py."""
+"""Tests fuer services/config_db.py."""
 
 from unittest.mock import patch
 
@@ -49,9 +49,16 @@ class TestReloadConfig:
         assert "WM-DE" in config_db.PK_REVERSE["WM"]
 
     def test_laedt_hsb_config_aus_db(self, app):
+        hsb_row = {
+            "HsbCode": "WB",
+            "Name": "Wirtschaft",
+            "Icon": "WB",
+            "FarbeHex": "#003",
+            "Sortierung": 1,
+        }
         results = [
             [],
-            [{"HsbCode": "WB", "Name": "Wirtschaft", "Icon": "WB", "FarbeHex": "#003", "Sortierung": 1}],
+            [hsb_row],
             [],
             [],
             [],

@@ -1,4 +1,4 @@
-﻿"""Tests fuer services/mariadb_connector.py."""
+"""Tests fuer services/mariadb_connector.py."""
 
 from unittest.mock import MagicMock, patch
 

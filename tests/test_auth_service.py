@@ -143,8 +143,6 @@ class TestIsAuthenticated:
 
     def test_eingeloggt(self, authenticated_client):
         with authenticated_client.application.test_request_context("/"):
-            from flask import session
-
             with authenticated_client.session_transaction() as sess:
                 sess["user"] = {"username": "test"}
             with authenticated_client.application.test_request_context("/"):
@@ -223,12 +221,8 @@ class TestGetPermConnection:
             app.config["PERM_DWH_PASSWORD"] = "secret"
             from studiengang_steckbriefe.services import auth as auth_svc
 
-            with patch(
-                "studiengang_steckbriefe.services.auth.pyodbc.drivers", return_value=[]
-            ):
-                with patch(
-                    "studiengang_steckbriefe.services.auth.pyodbc.connect"
-                ) as mock_connect:
+            with patch("studiengang_steckbriefe.services.auth.pyodbc.drivers", return_value=[]):
+                with patch("studiengang_steckbriefe.services.auth.pyodbc.connect") as mock_connect:
                     auth_svc._get_perm_connection()
             conn_str = mock_connect.call_args[0][0]
         assert "UID=sa" in conn_str
@@ -244,12 +238,8 @@ class TestGetPermConnection:
             app.config["PERM_DWH_DATABASE"] = "BCW_STA"
             from studiengang_steckbriefe.services import auth as auth_svc
 
-            with patch(
-                "studiengang_steckbriefe.services.auth.pyodbc.drivers", return_value=[]
-            ):
-                with patch(
-                    "studiengang_steckbriefe.services.auth.pyodbc.connect"
-                ) as mock_connect:
+            with patch("studiengang_steckbriefe.services.auth.pyodbc.drivers", return_value=[]):
+                with patch("studiengang_steckbriefe.services.auth.pyodbc.connect") as mock_connect:
                     auth_svc._get_perm_connection()
             conn_str = mock_connect.call_args[0][0]
         assert "Trusted_Connection=yes" in conn_str

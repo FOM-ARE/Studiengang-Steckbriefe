@@ -35,9 +35,7 @@ def test_health_db_verbunden_gibt_200(client):
     from unittest.mock import MagicMock, patch
 
     mock_conn = MagicMock()
-    with patch(
-        "studiengang_steckbriefe.web.health.get_connection", return_value=mock_conn
-    ):
+    with patch("studiengang_steckbriefe.web.health.get_connection", return_value=mock_conn):
         with patch("studiengang_steckbriefe.web.health.release_connection") as mock_release:
             response = client.get("/api/health")
     assert response.status_code == 200
