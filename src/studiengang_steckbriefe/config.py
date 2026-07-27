@@ -62,9 +62,9 @@ class Config:
         "ENTRA_REDIRECT_URI", "http://localhost:5000/api/auth/callback"
     )
     # Entra ID Gruppen (Object-IDs fuer Token-Claims-basierte Rollenzuordnung)
-    ENTRA_GROUP_ADMIN = os.environ.get("ENTRA_GROUP_ADMIN", "")
-    ENTRA_GROUP_WRITE = os.environ.get("ENTRA_GROUP_WRITE", "")
-    ENTRA_GROUP_READ = os.environ.get("ENTRA_GROUP_READ", "")
+    ENTRA_GROUP_ADMIN = os.environ.get("ENTRA_GROUP_ADMIN", "2392116c-4f38-4a3b-aaf3-87c5709328b1")
+    ENTRA_GROUP_WRITE = os.environ.get("ENTRA_GROUP_WRITE", "2f306242-4c19-43a8-bc4c-a4cfff907015")
+    ENTRA_GROUP_READ = os.environ.get("ENTRA_GROUP_READ", "c7380f69-3a73-4f22-add5-99ec4833afb2")
 
     # Berechtigungs-DB (SQL Server BCW_STA – eigener User nur fuer Berechtigungstabelle)
     PERM_DWH_HOST = os.environ.get("PERM_DWH_HOST", "ms-sql-107.bcw-intern.local")
