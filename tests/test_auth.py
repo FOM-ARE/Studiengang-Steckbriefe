@@ -34,3 +34,150 @@ def test_login_redirects(client):
     response = client.get("/api/auth/login")
     # Ohne gueltige Entra-Config gibt es einen Redirect oder Fehler
     assert response.status_code in (302, 500)
+
+
+def test_login_success_redirect_zu_microsoft(client):
+    """Login leitet bei gueltiger Konfiguration zu Microsoft weiter."""
+    from unittest.mock import MagicMock, patch
+
+    mock_auth = MagicMock()
+    mock_auth.get_auth_url.return_value = "https://login.microsoftonline.com/auth"
+    with patch("studiengang_steckbriefe.web.auth.EntraIdAuth", return_value=mock_auth):
+        response = client.get("/api/auth/login")
+    assert response.status_code == 302
+    assert "login.microsoftonline.com" in response.headers["Location"]
+
+
+def test_callback_state_mismatch_redirect(client):
+    """Callback mit falschem State leitet zur Login-Seite."""
+    with client.session_transaction() as sess:
+        sess["auth_state"] = "correct-state"
+    response = client.get("/auth/callback?state=wrong-state&code=abc")
+    assert response.status_code == 302
+    assert "invalid_state" in response.headers["Location"]
+
+
+def test_callback_kein_code_redirect(client):
+    """Callback ohne Code leitet zur Login-Seite."""
+    with client.session_transaction() as sess:
+        sess["auth_state"] = "state-abc"
+    response = client.get("/auth/callback?state=state-abc")
+    assert response.status_code == 302
+    assert "auth_failed" in response.headers["Location"]
+
+
+def test_callback_value_error_redirect(client):
+    """Callback mit ValueError beim Token-Exchange leitet zur Login-Seite."""
+    from unittest.mock import MagicMock, patch
+
+    with client.session_transaction() as sess:
+        sess["auth_state"] = "state-abc"
+    mock_auth = MagicMock()
+    mock_auth.acquire_token.side_effect = ValueError("Token abgelaufen")
+    with patch("studiengang_steckbriefe.web.auth.EntraIdAuth", return_value=mock_auth):
+        response = client.get("/auth/callback?state=state-abc&code=xyz")
+    assert response.status_code == 302
+    assert "auth_failed" in response.headers["Location"]
+
+
+def test_callback_exception_redirect(client):
+    """Callback mit unerwarteter Exception leitet zur Login-Seite."""
+    from unittest.mock import MagicMock, patch
+
+    with client.session_transaction() as sess:
+        sess["auth_state"] = "state-abc"
+    mock_auth = MagicMock()
+    mock_auth.acquire_token.side_effect = RuntimeError("Netzwerkfehler")
+    with patch("studiengang_steckbriefe.web.auth.EntraIdAuth", return_value=mock_auth):
+        response = client.get("/auth/callback?state=state-abc&code=xyz")
+    assert response.status_code == 302
+    assert "auth_failed" in response.headers["Location"]
+
+
+def test_callback_keine_rolle_redirect(client):
+    """Callback ohne Gruppe und ohne DB-Berechtigung leitet zur Login-Seite."""
+    from unittest.mock import MagicMock, patch
+
+    with client.session_transaction() as sess:
+        sess["auth_state"] = "state-abc"
+    mock_auth = MagicMock()
+    mock_auth.acquire_token.return_value = {
+        "id_token_claims": {"preferred_username": "no.role@fom.de", "name": "No Role"}
+    }
+    with patch("studiengang_steckbriefe.web.auth.EntraIdAuth", return_value=mock_auth):
+        with patch("studiengang_steckbriefe.web.auth.get_role_from_token_claims", return_value=None):
+            with patch("studiengang_steckbriefe.web.auth.get_user_role", return_value=None):
+                response = client.get("/auth/callback?state=state-abc&code=xyz")
+    assert response.status_code == 302
+    assert "no_permission" in response.headers["Location"]
+
+
+def test_callback_erfolgreicher_login_via_gruppe(client):
+    """Erfolgreicher Callback via Gruppen-Claim setzt die Session."""
+    from unittest.mock import MagicMock, patch
+
+    with client.session_transaction() as sess:
+        sess["auth_state"] = "state-abc"
+    mock_auth = MagicMock()
+    mock_auth.acquire_token.return_value = {
+        "id_token_claims": {
+            "preferred_username": "anna.muster@fom.de",
+            "name": "Anna Muster",
+            "groups": ["2392116c-4f38-4a3b-aaf3-87c5709328b1"],
+        }
+    }
+    with patch("studiengang_steckbriefe.web.auth.EntraIdAuth", return_value=mock_auth):
+        with patch(
+            "studiengang_steckbriefe.web.auth.get_role_from_token_claims", return_value="admin"
+        ):
+            response = client.get("/auth/callback?state=state-abc&code=xyz")
+    assert response.status_code == 302
+    with client.session_transaction() as sess:
+        assert sess["user"]["role"] == "admin"
+        assert sess["user"]["username"] == "anna.muster"
+
+
+def test_callback_erfolgreicher_login_via_db_fallback(client):
+    """Erfolgreicher Callback via DB-Fallback wenn kein Gruppen-Claim."""
+    from unittest.mock import MagicMock, patch
+
+    with client.session_transaction() as sess:
+        sess["auth_state"] = "state-abc"
+    mock_auth = MagicMock()
+    mock_auth.acquire_token.return_value = {
+        "id_token_claims": {"preferred_username": "bob.read@fom.de", "name": "Bob"}
+    }
+    with patch("studiengang_steckbriefe.web.auth.EntraIdAuth", return_value=mock_auth):
+        with patch(
+            "studiengang_steckbriefe.web.auth.get_role_from_token_claims", return_value=None
+        ):
+            with patch(
+                "studiengang_steckbriefe.web.auth.get_user_role", return_value="read"
+            ):
+                response = client.get("/auth/callback?state=state-abc&code=xyz")
+    assert response.status_code == 302
+    with client.session_transaction() as sess:
+        assert sess["user"]["role"] == "read"
+
+
+def test_callback_db_fehler_redirect(client):
+    """Callback mit DB-Fehler beim Fallback leitet zur Login-Seite."""
+    from unittest.mock import MagicMock, patch
+
+    with client.session_transaction() as sess:
+        sess["auth_state"] = "state-abc"
+    mock_auth = MagicMock()
+    mock_auth.acquire_token.return_value = {
+        "id_token_claims": {"preferred_username": "user@fom.de", "name": "User"}
+    }
+    with patch("studiengang_steckbriefe.web.auth.EntraIdAuth", return_value=mock_auth):
+        with patch(
+            "studiengang_steckbriefe.web.auth.get_role_from_token_claims", return_value=None
+        ):
+            with patch(
+                "studiengang_steckbriefe.web.auth.get_user_role",
+                side_effect=Exception("DB down"),
+            ):
+                response = client.get("/auth/callback?state=state-abc&code=xyz")
+    assert response.status_code == 302
+    assert "db_error" in response.headers["Location"]

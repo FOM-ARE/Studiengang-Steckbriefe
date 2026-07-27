@@ -140,3 +140,181 @@ class TestIsAuthenticated:
     def test_nicht_eingeloggt(self, client):
         with client.application.test_request_context("/"):
             assert is_authenticated() is False
+
+    def test_eingeloggt(self, authenticated_client):
+        with authenticated_client.application.test_request_context("/"):
+            from flask import session
+
+            with authenticated_client.session_transaction() as sess:
+                sess["user"] = {"username": "test"}
+            with authenticated_client.application.test_request_context("/"):
+                # Direkt testen ueber die Session
+                pass
+        # Einfacher Test: authenticated_client hat user in Session
+        response = authenticated_client.get("/api/auth/me")
+        assert response.status_code == 200
+
+
+class TestGetRoleFromTokenClaims:
+    def test_gibt_admin_rolle_zurueck(self, app):
+        from studiengang_steckbriefe.services.auth import get_role_from_token_claims
+
+        claims = {"groups": ["2392116c-4f38-4a3b-aaf3-87c5709328b1"]}
+        mapping = {
+            "2392116c-4f38-4a3b-aaf3-87c5709328b1": "admin",
+            "2f306242-4c19-43a8-bc4c-a4cfff907015": "write",
+            "c7380f69-3a73-4f22-add5-99ec4833afb2": "read",
+        }
+        role = get_role_from_token_claims(claims, mapping)
+        assert role == "admin"
+
+    def test_gibt_hoechste_rolle_bei_mehreren_gruppen(self, app):
+        from studiengang_steckbriefe.services.auth import get_role_from_token_claims
+
+        claims = {
+            "groups": [
+                "c7380f69-3a73-4f22-add5-99ec4833afb2",
+                "2f306242-4c19-43a8-bc4c-a4cfff907015",
+            ]
+        }
+        mapping = {
+            "2392116c-4f38-4a3b-aaf3-87c5709328b1": "admin",
+            "2f306242-4c19-43a8-bc4c-a4cfff907015": "write",
+            "c7380f69-3a73-4f22-add5-99ec4833afb2": "read",
+        }
+        role = get_role_from_token_claims(claims, mapping)
+        assert role == "write"
+
+    def test_keine_gruppen_im_claim_gibt_none(self, app):
+        from studiengang_steckbriefe.services.auth import get_role_from_token_claims
+
+        claims = {}
+        mapping = {"abc": "admin"}
+        role = get_role_from_token_claims(claims, mapping)
+        assert role is None
+
+    def test_keine_passende_gruppe_gibt_none(self, app):
+        from studiengang_steckbriefe.services.auth import get_role_from_token_claims
+
+        claims = {"groups": ["unbekannte-gruppe-id"]}
+        mapping = {"bekannte-gruppe-id": "admin"}
+        role = get_role_from_token_claims(claims, mapping)
+        assert role is None
+
+    def test_leerer_group_id_wird_ignoriert(self, app):
+        from studiengang_steckbriefe.services.auth import get_role_from_token_claims
+
+        claims = {"groups": ["valid-id"]}
+        mapping = {"": "admin", "valid-id": "read"}
+        role = get_role_from_token_claims(claims, mapping)
+        assert role == "read"
+
+
+class TestGetPermConnection:
+    def test_baut_sql_connection_string(self, app):
+        from unittest.mock import patch
+
+        with app.app_context():
+            app.config["PERM_DWH_AUTHENTICATION"] = "SQL"
+            app.config["PERM_DWH_HOST"] = "sql-server"
+            app.config["PERM_DWH_PORT"] = "1433"
+            app.config["PERM_DWH_DATABASE"] = "BCW_STA"
+            app.config["PERM_DWH_USER"] = "sa"
+            app.config["PERM_DWH_PASSWORD"] = "secret"
+            from studiengang_steckbriefe.services import auth as auth_svc
+
+            with patch(
+                "studiengang_steckbriefe.services.auth.pyodbc.drivers", return_value=[]
+            ):
+                with patch(
+                    "studiengang_steckbriefe.services.auth.pyodbc.connect"
+                ) as mock_connect:
+                    auth_svc._get_perm_connection()
+            conn_str = mock_connect.call_args[0][0]
+        assert "UID=sa" in conn_str
+        assert "BCW_STA" in conn_str
+
+    def test_baut_windows_connection_string(self, app):
+        from unittest.mock import patch
+
+        with app.app_context():
+            app.config["PERM_DWH_AUTHENTICATION"] = "Windows"
+            app.config["PERM_DWH_HOST"] = "sql-server"
+            app.config["PERM_DWH_PORT"] = "1433"
+            app.config["PERM_DWH_DATABASE"] = "BCW_STA"
+            from studiengang_steckbriefe.services import auth as auth_svc
+
+            with patch(
+                "studiengang_steckbriefe.services.auth.pyodbc.drivers", return_value=[]
+            ):
+                with patch(
+                    "studiengang_steckbriefe.services.auth.pyodbc.connect"
+                ) as mock_connect:
+                    auth_svc._get_perm_connection()
+            conn_str = mock_connect.call_args[0][0]
+        assert "Trusted_Connection=yes" in conn_str
+
+
+class TestCheckPermission:
+    def _mock_conn(self, rows):
+        mock_cursor = MagicMock()
+        mock_cursor.description = [("Berechtigt",), ("Recht",), ("Typ",)]
+        mock_cursor.fetchall.return_value = rows
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        return mock_conn
+
+    def test_user_hat_berechtigung(self, app):
+        from studiengang_steckbriefe.services.auth import check_permission
+
+        mock_conn = self._mock_conn([("anna.muster", "read", "user")])
+        with app.app_context():
+            with patch(
+                "studiengang_steckbriefe.services.auth._get_perm_connection",
+                return_value=mock_conn,
+            ):
+                result = check_permission("anna.muster", "read")
+        assert result is True
+
+    def test_user_hat_keine_berechtigung(self, app):
+        from studiengang_steckbriefe.services.auth import check_permission
+
+        mock_conn = self._mock_conn([("other.user", "read", "user")])
+        with app.app_context():
+            with patch(
+                "studiengang_steckbriefe.services.auth._get_perm_connection",
+                return_value=mock_conn,
+            ):
+                result = check_permission("anna.muster", "read")
+        assert result is False
+
+    def test_leere_berechtigungen_gibt_false(self, app):
+        from studiengang_steckbriefe.services.auth import check_permission
+
+        mock_conn = self._mock_conn([])
+        with app.app_context():
+            with patch(
+                "studiengang_steckbriefe.services.auth._get_perm_connection",
+                return_value=mock_conn,
+            ):
+                result = check_permission("anna.muster")
+        assert result is False
+
+
+class TestGetCurrentUser:
+    def test_gibt_user_aus_session(self, authenticated_client):
+        from studiengang_steckbriefe.services.auth import get_current_user
+
+        with authenticated_client.application.test_request_context("/"):
+            from flask import session
+
+            session["user"] = {"username": "test.user", "role": "admin"}
+            user = get_current_user()
+        assert user["username"] == "test.user"
+
+    def test_gibt_none_wenn_nicht_eingeloggt(self, client):
+        from studiengang_steckbriefe.services.auth import get_current_user
+
+        with client.application.test_request_context("/"):
+            user = get_current_user()
+        assert user is None

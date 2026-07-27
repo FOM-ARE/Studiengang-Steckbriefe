@@ -56,3 +56,78 @@ class TestReloadConfig:
             response = authenticated_client.post("/api/config/reload")
         assert response.status_code == 200
         mock_reload.assert_called_once()
+
+    def test_fehler_gibt_500(self, authenticated_client):
+        with patch(
+            "studiengang_steckbriefe.web.cache_mgmt.reload_config",
+            side_effect=Exception("MariaDB down"),
+        ):
+            response = authenticated_client.post("/api/config/reload")
+        assert response.status_code == 500
+        data = response.get_json()
+        assert data["success"] is False
+        assert "MariaDB down" in data["error"]
+
+
+class TestDatenstand:
+    def test_unauthentifiziert_gibt_401(self, client):
+        response = client.get("/api/cache/datenstand")
+        assert response.status_code == 401
+
+    def test_mit_timestamp(self, authenticated_client):
+        with patch(
+            "studiengang_steckbriefe.web.cache_mgmt.cache_status",
+            return_value={"entries": 1, "newest": 1700000000.0},
+        ):
+            response = authenticated_client.get("/api/cache/datenstand")
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["success"] is True
+        assert data["datenstand"] is not None
+
+    def test_ohne_timestamp(self, authenticated_client):
+        with patch(
+            "studiengang_steckbriefe.web.cache_mgmt.cache_status",
+            return_value={"entries": 0, "newest": None},
+        ):
+            response = authenticated_client.get("/api/cache/datenstand")
+        assert response.status_code == 200
+        assert response.get_json()["datenstand"] is None
+
+
+class TestPreload:
+    def test_erfordert_admin(self, client):
+        response = client.post("/api/cache/preload")
+        assert response.status_code == 401
+
+    def test_success(self, authenticated_client):
+        from unittest.mock import MagicMock
+
+        mock_hsbs = [{"programmes": [{"produktkuerzel": "WM"}, {"produktkuerzel": "WI"}]}]
+        endpoint_fns = [
+            "get_trends", "get_stammdaten", "get_studienerfolg", "get_uebergang",
+            "get_herkunft", "get_zuzahler", "get_vertiefungsrichtungen",
+            "get_rahmendaten", "get_aktive_hszen", "get_anrechnungen",
+        ]
+        with patch(
+            "studiengang_steckbriefe.services.steckbrief.get_studiengaenge",
+            return_value=mock_hsbs,
+        ):
+            with patch.multiple(
+                "studiengang_steckbriefe.services.steckbrief",
+                **{name: MagicMock(return_value={}) for name in endpoint_fns},
+            ):
+                response = authenticated_client.post("/api/cache/preload")
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["success"] is True
+        assert data["studiengaenge"] == 2
+
+    def test_fehler_bei_get_studiengaenge_gibt_500(self, authenticated_client):
+        with patch(
+            "studiengang_steckbriefe.services.steckbrief.get_studiengaenge",
+            side_effect=Exception("DB down"),
+        ):
+            response = authenticated_client.post("/api/cache/preload")
+        assert response.status_code == 500
+        assert response.get_json()["success"] is False
