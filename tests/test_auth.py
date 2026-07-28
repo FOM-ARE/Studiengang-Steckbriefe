@@ -114,6 +114,56 @@ def test_callback_keine_rolle_redirect(client):
     assert "no_permission" in response.headers["Location"]
 
 
+def test_callback_ruft_graph_api_wenn_kein_groups_claim(client):
+    """Wenn groups-Claim fehlt, werden Gruppen via Graph API geholt."""
+    from unittest.mock import MagicMock, patch
+
+    with client.session_transaction() as sess:
+        sess["auth_state"] = "state-abc"
+    mock_auth = MagicMock()
+    mock_auth.acquire_token.return_value = {
+        "id_token_claims": {"preferred_username": "christian.rosenberger@fom.de", "name": "Christian"},
+        "access_token": "graph-access-token",
+    }
+    mock_auth.fetch_user_groups.return_value = ["2392116c-4f38-4a3b-aaf3-87c5709328b1"]
+
+    with patch("studiengang_steckbriefe.web.auth.EntraIdAuth", return_value=mock_auth):
+        with patch(
+            "studiengang_steckbriefe.web.auth.get_role_from_token_claims",
+            side_effect=lambda claims, mapping: (
+                "admin" if "2392116c-4f38-4a3b-aaf3-87c5709328b1" in claims.get("groups", []) else None
+            ),
+        ):
+            response = client.get("/auth/callback?state=state-abc&code=xyz")
+
+    mock_auth.fetch_user_groups.assert_called_once_with("graph-access-token")
+    assert response.status_code == 302
+    with client.session_transaction() as sess:
+        assert sess["user"]["role"] == "admin"
+
+
+def test_callback_kein_access_token_kein_graph_api_call(client):
+    """Wenn kein access_token vorhanden, wird Graph API nicht aufgerufen."""
+    from unittest.mock import MagicMock, patch
+
+    with client.session_transaction() as sess:
+        sess["auth_state"] = "state-abc"
+    mock_auth = MagicMock()
+    mock_auth.acquire_token.return_value = {
+        "id_token_claims": {"preferred_username": "user@fom.de", "name": "User"},
+        # kein access_token
+    }
+    with patch("studiengang_steckbriefe.web.auth.EntraIdAuth", return_value=mock_auth):
+        with patch(
+            "studiengang_steckbriefe.web.auth.get_role_from_token_claims", return_value=None
+        ):
+            with patch("studiengang_steckbriefe.web.auth.get_user_role", return_value="read"):
+                response = client.get("/auth/callback?state=state-abc&code=xyz")
+
+    mock_auth.fetch_user_groups.assert_not_called()
+    assert response.status_code == 302
+
+
 def test_callback_erfolgreicher_login_via_gruppe(client):
     """Erfolgreicher Callback via Gruppen-Claim setzt die Session."""
     from unittest.mock import MagicMock, patch

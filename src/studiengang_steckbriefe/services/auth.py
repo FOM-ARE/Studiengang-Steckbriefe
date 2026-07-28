@@ -4,6 +4,7 @@ import logging
 
 import msal
 import pyodbc
+import requests
 from flask import current_app, session
 
 logger = logging.getLogger(__name__)
@@ -39,7 +40,7 @@ class EntraIdAuth:
         """Tauscht den Authorization Code gegen Token-Claims.
 
         Returns:
-            Dict mit id_token_claims (Name, E-Mail, OID etc.)
+            Dict mit id_token_claims (Name, E-Mail, OID etc.) und access_token.
         """
         result = self._msal_app.acquire_token_by_authorization_code(
             auth_code,
@@ -49,6 +50,38 @@ class EntraIdAuth:
         if "error" in result:
             raise ValueError(result.get("error_description", "Authentifizierung fehlgeschlagen"))
         return result
+
+    def fetch_user_groups(self, access_token: str) -> list[str]:
+        """Ruft die Gruppen-Object-IDs des eingeloggten Users via Microsoft Graph ab.
+
+        Verwendet den Access Token aus dem Auth Flow (User.Read-Scope reicht fuer
+        /me/memberOf in delegiertem Kontext). Gibt eine leere Liste zurueck wenn
+        der Aufruf fehlschlaegt (kein Hard Fail – Rollenpruefung greift trotzdem).
+
+        Returns:
+            Liste von Gruppen-Object-IDs (str).
+        """
+        url = "https://graph.microsoft.com/v1.0/me/memberOf?$select=id&$top=100"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        group_ids: list[str] = []
+        try:
+            while url:
+                resp = requests.get(url, headers=headers, timeout=10)
+                if resp.status_code != 200:
+                    logger.warning(
+                        "Graph /me/memberOf fehlgeschlagen: HTTP %s – %s",
+                        resp.status_code,
+                        resp.text[:200],
+                    )
+                    break
+                data = resp.json()
+                group_ids.extend(
+                    entry["id"] for entry in data.get("value", []) if "id" in entry
+                )
+                url = data.get("@odata.nextLink")  # Paginierung
+        except Exception as exc:
+            logger.warning("Graph-API-Aufruf fehlgeschlagen: %s", exc)
+        return group_ids
 
 
 # ═══════════════════════════════════════
@@ -168,20 +201,36 @@ def check_permission(username: str, required_role: str = "read") -> bool:
     return False
 
 
-def get_user_role(username: str) -> str | None:
-    """Gibt die hoechste Rolle eines Benutzers zurueck oder None."""
+def get_user_role(username: str, user_groups: list[str] | None = None) -> str | None:
+    """Gibt die hoechste Rolle eines Benutzers zurueck oder None.
+
+    Prueft sowohl individuelle User-Eintraege als auch Gruppen-Eintraege
+    in BCW_STA.readwrite.App_Berechtigungen.
+
+    Args:
+        username: Der Benutzername (sAMAccountName oder UPN-Prefix).
+        user_groups: Optionale Liste von Entra-Gruppen-Object-IDs des Users.
+    """
     role_hierarchy = {"admin": 3, "write": 2, "read": 1}
     permissions = load_app_permissions()
     max_level = 0
     max_role = None
+    groups_lower = {g.lower() for g in (user_groups or [])}
 
     for role, entries in permissions.items():
+        level = role_hierarchy.get(role, 0)
+        if level <= max_level:
+            continue
         for entry in entries:
-            if entry["typ"] == "user" and entry["berechtigt"].lower() == username.lower():
-                level = role_hierarchy.get(role, 0)
-                if level > max_level:
-                    max_level = level
-                    max_role = role
+            berechtigt = entry["berechtigt"].lower()
+            if entry["typ"] == "user" and berechtigt == username.lower():
+                max_level = level
+                max_role = role
+                break
+            if entry["typ"] == "gruppe" and berechtigt in groups_lower:
+                max_level = level
+                max_role = role
+                break
     return max_role
 
 

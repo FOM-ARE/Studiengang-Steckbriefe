@@ -79,24 +79,33 @@ def callback():
         username = claims.get("preferred_username", "").split("@")[0]
         display_name = claims.get("name", username)
 
+        # Gruppen-Object-IDs ermitteln:
+        # Bevorzugt aus dem groups-Claim im Token (wenn in App Registration konfiguriert),
+        # sonst via Graph API /me/memberOf (kein zusaetzlicher Admin Consent noetig).
+        user_groups: list[str] = list(claims.get("groups", []))
+        if not user_groups:
+            access_token = result.get("access_token", "")
+            if access_token:
+                user_groups = auth.fetch_user_groups(access_token)
+
     except ValueError:
         return redirect(url_for(LOGIN_PAGE, error="auth_failed"))
     except Exception as exc:
         current_app.logger.exception("Entra ID Token-Exchange fehlgeschlagen: %s", exc)
         return redirect(url_for(LOGIN_PAGE, error="auth_failed"))
 
-    # Berechtigung pruefen: Zuerst Gruppen aus Token-Claims, dann DB als Fallback
-    role = None
+    # Berechtigung pruefen: Gruppen gegen konfigurierte Object-IDs mappen
     group_mapping = {
         current_app.config.get("ENTRA_GROUP_ADMIN", ""): "admin",
         current_app.config.get("ENTRA_GROUP_WRITE", ""): "write",
         current_app.config.get("ENTRA_GROUP_READ", ""): "read",
     }
-    role = get_role_from_token_claims(claims, group_mapping)
+    role = get_role_from_token_claims({"groups": user_groups}, group_mapping)
 
     if not role:
+        # Fallback: individuelle User-Eintraege oder Gruppen in BCW_STA pruefen
         try:
-            role = get_user_role(username)
+            role = get_user_role(username, user_groups=user_groups)
         except Exception as exc:
             current_app.logger.exception(
                 "DB-Berechtigungspruefung fehlgeschlagen fuer '%s': %s", username, exc

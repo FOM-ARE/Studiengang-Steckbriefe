@@ -136,6 +136,170 @@ class TestGetUserRole:
         assert role == "write"
 
 
+    def test_gruppe_in_db_ergibt_rolle(self, app):
+        """Gruppen-Object-ID in DB und user_groups stimmen ueberein → Rolle wird erkannt."""
+        mock_conn = self._mock_perm_conn(
+            [("2392116c-4f38-4a3b-aaf3-87c5709328b1", "admin", "gruppe")]
+        )
+        with app.app_context():
+            with patch(
+                "studiengang_steckbriefe.services.auth._get_perm_connection",
+                return_value=mock_conn,
+            ):
+                role = get_user_role(
+                    "christian.rosenberger",
+                    user_groups=["2392116c-4f38-4a3b-aaf3-87c5709328b1"],
+                )
+        assert role == "admin"
+
+    def test_gruppe_in_db_per_object_id(self, app):
+        mock_conn = self._mock_perm_conn(
+            [("2392116c-4f38-4a3b-aaf3-87c5709328b1", "admin", "gruppe")]
+        )
+        with app.app_context():
+            with patch(
+                "studiengang_steckbriefe.services.auth._get_perm_connection",
+                return_value=mock_conn,
+            ):
+                role = get_user_role(
+                    "christian.rosenberger",
+                    user_groups=["2392116c-4f38-4a3b-aaf3-87c5709328b1"],
+                )
+        assert role == "admin"
+
+    def test_gruppen_pruefen_hoechste_rolle(self, app):
+        mock_conn = self._mock_perm_conn(
+            [
+                ("c7380f69-3a73-4f22-add5-99ec4833afb2", "read", "gruppe"),
+                ("2f306242-4c19-43a8-bc4c-a4cfff907015", "write", "gruppe"),
+            ]
+        )
+        with app.app_context():
+            with patch(
+                "studiengang_steckbriefe.services.auth._get_perm_connection",
+                return_value=mock_conn,
+            ):
+                role = get_user_role(
+                    "some.user",
+                    user_groups=[
+                        "c7380f69-3a73-4f22-add5-99ec4833afb2",
+                        "2f306242-4c19-43a8-bc4c-a4cfff907015",
+                    ],
+                )
+        assert role == "write"
+
+    def test_keine_gruppe_kein_user_eintrag_gibt_none(self, app):
+        mock_conn = self._mock_perm_conn(
+            [("andere.person", "admin", "user")]
+        )
+        with app.app_context():
+            with patch(
+                "studiengang_steckbriefe.services.auth._get_perm_connection",
+                return_value=mock_conn,
+            ):
+                role = get_user_role(
+                    "christian.rosenberger",
+                    user_groups=["unbekannte-gruppe"],
+                )
+        assert role is None
+
+    def test_user_eintrag_hat_vorrang_vor_gruppe(self, app):
+        """Ein User-Eintrag mit admin schlaegt eine Gruppen-Berechtigung write."""
+        mock_conn = self._mock_perm_conn(
+            [
+                ("christian.rosenberger", "admin", "user"),
+                ("c7380f69-3a73-4f22-add5-99ec4833afb2", "read", "gruppe"),
+            ]
+        )
+        with app.app_context():
+            with patch(
+                "studiengang_steckbriefe.services.auth._get_perm_connection",
+                return_value=mock_conn,
+            ):
+                role = get_user_role(
+                    "christian.rosenberger",
+                    user_groups=["c7380f69-3a73-4f22-add5-99ec4833afb2"],
+                )
+        assert role == "admin"
+
+
+class TestFetchUserGroups:
+    def test_gibt_gruppen_ids_zurueck(self, app):
+        from studiengang_steckbriefe.services.auth import EntraIdAuth
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "value": [
+                {"id": "2392116c-4f38-4a3b-aaf3-87c5709328b1"},
+                {"id": "c7380f69-3a73-4f22-add5-99ec4833afb2"},
+            ]
+        }
+        with patch(_MSAL_CCA):
+            with patch(
+                "studiengang_steckbriefe.services.auth.requests.get",
+                return_value=mock_response,
+            ):
+                with app.app_context():
+                    auth = EntraIdAuth(app)
+                    groups = auth.fetch_user_groups("access-token-xyz")
+        assert "2392116c-4f38-4a3b-aaf3-87c5709328b1" in groups
+        assert "c7380f69-3a73-4f22-add5-99ec4833afb2" in groups
+
+    def test_paginierung_folgt_next_link(self, app):
+        from studiengang_steckbriefe.services.auth import EntraIdAuth
+
+        first_response = MagicMock()
+        first_response.status_code = 200
+        first_response.json.return_value = {
+            "value": [{"id": "gruppe-1"}],
+            "@odata.nextLink": "https://graph.microsoft.com/v1.0/me/memberOf?$skiptoken=abc",
+        }
+        second_response = MagicMock()
+        second_response.status_code = 200
+        second_response.json.return_value = {"value": [{"id": "gruppe-2"}]}
+
+        with patch(_MSAL_CCA):
+            with patch(
+                "studiengang_steckbriefe.services.auth.requests.get",
+                side_effect=[first_response, second_response],
+            ):
+                with app.app_context():
+                    auth = EntraIdAuth(app)
+                    groups = auth.fetch_user_groups("access-token-xyz")
+        assert "gruppe-1" in groups
+        assert "gruppe-2" in groups
+
+    def test_http_fehler_gibt_leere_liste(self, app):
+        from studiengang_steckbriefe.services.auth import EntraIdAuth
+
+        mock_response = MagicMock()
+        mock_response.status_code = 403
+        mock_response.text = "Forbidden"
+        with patch(_MSAL_CCA):
+            with patch(
+                "studiengang_steckbriefe.services.auth.requests.get",
+                return_value=mock_response,
+            ):
+                with app.app_context():
+                    auth = EntraIdAuth(app)
+                    groups = auth.fetch_user_groups("access-token-xyz")
+        assert groups == []
+
+    def test_netzwerkfehler_gibt_leere_liste(self, app):
+        from studiengang_steckbriefe.services.auth import EntraIdAuth
+
+        with patch(_MSAL_CCA):
+            with patch(
+                "studiengang_steckbriefe.services.auth.requests.get",
+                side_effect=ConnectionError("Timeout"),
+            ):
+                with app.app_context():
+                    auth = EntraIdAuth(app)
+                    groups = auth.fetch_user_groups("access-token-xyz")
+        assert groups == []
+
+
 class TestIsAuthenticated:
     def test_nicht_eingeloggt(self, client):
         with client.application.test_request_context("/"):
