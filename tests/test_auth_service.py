@@ -135,7 +135,6 @@ class TestGetUserRole:
                 role = get_user_role("test.user")
         assert role == "write"
 
-
     def test_gruppe_in_db_ergibt_rolle(self, app):
         """Gruppen-Object-ID in DB und user_groups stimmen ueberein → Rolle wird erkannt."""
         mock_conn = self._mock_perm_conn(
@@ -189,9 +188,7 @@ class TestGetUserRole:
         assert role == "write"
 
     def test_keine_gruppe_kein_user_eintrag_gibt_none(self, app):
-        mock_conn = self._mock_perm_conn(
-            [("andere.person", "admin", "user")]
-        )
+        mock_conn = self._mock_perm_conn([("andere.person", "admin", "user")])
         with app.app_context():
             with patch(
                 "studiengang_steckbriefe.services.auth._get_perm_connection",

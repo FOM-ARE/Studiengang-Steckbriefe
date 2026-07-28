@@ -122,7 +122,10 @@ def test_callback_ruft_graph_api_wenn_kein_groups_claim(client):
         sess["auth_state"] = "state-abc"
     mock_auth = MagicMock()
     mock_auth.acquire_token.return_value = {
-        "id_token_claims": {"preferred_username": "christian.rosenberger@fom.de", "name": "Christian"},
+        "id_token_claims": {
+            "preferred_username": "christian.rosenberger@fom.de",
+            "name": "Christian",
+        },
         "access_token": "graph-access-token",
     }
     mock_auth.fetch_user_groups.return_value = ["2392116c-4f38-4a3b-aaf3-87c5709328b1"]
@@ -131,7 +134,9 @@ def test_callback_ruft_graph_api_wenn_kein_groups_claim(client):
         with patch(
             "studiengang_steckbriefe.web.auth.get_role_from_token_claims",
             side_effect=lambda claims, mapping: (
-                "admin" if "2392116c-4f38-4a3b-aaf3-87c5709328b1" in claims.get("groups", []) else None
+                "admin"
+                if "2392116c-4f38-4a3b-aaf3-87c5709328b1" in claims.get("groups", [])
+                else None
             ),
         ):
             response = client.get("/auth/callback?state=state-abc&code=xyz")

@@ -75,9 +75,7 @@ class EntraIdAuth:
                     )
                     break
                 data = resp.json()
-                group_ids.extend(
-                    entry["id"] for entry in data.get("value", []) if "id" in entry
-                )
+                group_ids.extend(entry["id"] for entry in data.get("value", []) if "id" in entry)
                 url = data.get("@odata.nextLink")  # Paginierung
         except Exception as exc:
             logger.warning("Graph-API-Aufruf fehlgeschlagen: %s", exc)
