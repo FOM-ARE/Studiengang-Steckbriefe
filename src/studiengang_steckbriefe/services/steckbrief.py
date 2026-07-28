@@ -1040,6 +1040,26 @@ def get_herkunft(produktkuerzel: str) -> dict:
         prefix = "am_jetzigen" if same_hsz else "an_anderem"
         return f"{prefix}_{timing}"
 
+    def classify_detailed(row):
+        """Klassifiziert Herkunft feingranular fuer die Kohorten-Zeitreihe."""
+        b_ex = row.get("B_ExDatum")
+        m_im = row.get("M_ImDatum")
+        if b_ex is None:
+            return "nicht_intern"
+        same_hsz = row.get("GleicherHSZ") == 1
+        prefix = "am_jetzigen" if same_hsz else "an_anderem"
+        b_str = str(b_ex)[:10]
+        m_str = str(m_im)[:10] if m_im else b_str
+        if b_str > m_str:
+            sub = "ueberschneidung"
+        else:
+            try:
+                gap = (date.fromisoformat(m_str) - date.fromisoformat(b_str)).days
+                sub = "folgesemester" if gap <= 180 else "pause"
+            except Exception:
+                sub = "folgesemester"
+        return f"{prefix}_{sub}"
+
     def compute_herkunft_stats(data_rows):
         total = len(data_rows) or 1
         # Bachelor-Studiengaenge
@@ -1122,6 +1142,75 @@ def get_herkunft(produktkuerzel: str) -> dict:
     sg_stats = compute_herkunft_stats(rows)
     fom_stats = compute_herkunft_stats(fom_rows)
 
+    # --- Kohorten-basierte Zeitreihe (letzte 5 Kohorten) ---
+    kohorten = sorted(set(r.get("M_Kohorte") for r in rows if r.get("M_Kohorte")))[-5:]
+    kohorte_rows_map = {k: [r for r in rows if r.get("M_Kohorte") == k] for k in kohorten}
+
+    _series_keys = [
+        "nicht_intern",
+        "am_jetzigen_hsz",
+        "am_jetzigen_ueberschneidung",
+        "am_jetzigen_folgesemester",
+        "am_jetzigen_pause",
+        "an_anderem_hsz",
+        "an_anderem_ueberschneidung",
+        "an_anderem_folgesemester",
+        "an_anderem_pause",
+    ]
+    _parent_map = {
+        "am_jetzigen_ueberschneidung": "am_jetzigen_hsz",
+        "am_jetzigen_folgesemester": "am_jetzigen_hsz",
+        "am_jetzigen_pause": "am_jetzigen_hsz",
+        "an_anderem_ueberschneidung": "an_anderem_hsz",
+        "an_anderem_folgesemester": "an_anderem_hsz",
+        "an_anderem_pause": "an_anderem_hsz",
+    }
+    herkunft_series: dict = {key: [] for key in _series_keys}
+    for k in kohorten:
+        k_rows = kohorte_rows_map[k]
+        total_k = len(k_rows) or 1
+        counts: dict = {key: 0 for key in _series_keys}
+        for r in k_rows:
+            cat = classify_detailed(r)
+            if cat in counts:
+                counts[cat] += 1
+                parent = _parent_map.get(cat)
+                if parent:
+                    counts[parent] += 1
+        for key in _series_keys:
+            herkunft_series[key].append(round(counts[key] / total_k * 100, 1))
+
+    def _add_werte_pct(items: list, field: str, filter_val: int | None = None) -> list:
+        """Erweitert items um Prozentwerte je Kohorte."""
+        result = []
+        for item in items:
+            name = item["name"]
+            werte = []
+            for k in kohorten:
+                k_rows = kohorte_rows_map[k]
+                if filter_val is not None:
+                    k_rows = [r for r in k_rows if r.get("GleicherHSZ") == filter_val]
+                total_k = len(k_rows) or 1
+                cnt = sum(1 for r in k_rows if (r.get(field) or "Unbekannt") == name)
+                werte.append(round(cnt / total_k * 100, 1))
+            result.append({**item, "werte": werte})
+        return result
+
+    def _add_werte_cnt(items: list, field: str, filter_val: int | None = None) -> list:
+        """Erweitert items um Anzahl-Werte je Kohorte."""
+        result = []
+        for item in items:
+            name = item["name"]
+            werte = []
+            for k in kohorten:
+                k_rows = kohorte_rows_map[k]
+                if filter_val is not None:
+                    k_rows = [r for r in k_rows if r.get("GleicherHSZ") == filter_val]
+                cnt = sum(1 for r in k_rows if (r.get(field) or "") == name)
+                werte.append(cnt)
+            result.append({**item, "werte": werte})
+        return result
+
     # HSZ-Detail
     hsz_set = sorted(set(r.get("M_HSZ") for r in rows if r.get("M_HSZ")))
     hsz_detail: dict = {}
@@ -1135,6 +1224,22 @@ def get_herkunft(produktkuerzel: str) -> dict:
         "uebersicht_fom": fom_stats["uebersicht_vals"],
         "uebersicht_sg": sg_stats["uebersicht_vals"],
         "hsz_detail": hsz_detail,
+        "kohorten": kohorten,
+        "herkunft": herkunft_series,
+        "bachelor_studiengaenge": _add_werte_pct(sg_stats["bachelor_studiengaenge"], "B_SG"),
+        "bachelor_studiengaenge_gleich": _add_werte_pct(
+            sg_stats["bachelor_studiengaenge_gleich"], "B_SG", filter_val=1
+        ),
+        "bachelor_studiengaenge_anders": _add_werte_pct(
+            sg_stats["bachelor_studiengaenge_anders"], "B_SG", filter_val=0
+        ),
+        "top_studienrichtungen": _add_werte_cnt(sg_stats["top_studienrichtungen"], "B_Familie"),
+        "top_studienrichtungen_gleich": _add_werte_cnt(
+            sg_stats["top_studienrichtungen_gleich"], "B_Familie", filter_val=1
+        ),
+        "top_studienrichtungen_anders": _add_werte_cnt(
+            sg_stats["top_studienrichtungen_anders"], "B_Familie", filter_val=0
+        ),
     }
     cache_set(cache_key, data)
     return data
