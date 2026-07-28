@@ -41,3 +41,13 @@ docker-compose.override.yml
 
 # Node (legacy)
 node_modules/
+
+# Lokale Analyse-/Entwicklungsskripte (nicht Teil der App)
+check_*.py
+compare_*.py
+find_*.py
+fix_*.py
+_fix_*.py
+show_*.py
+test_new_query.py
+vergleich_logik.py
