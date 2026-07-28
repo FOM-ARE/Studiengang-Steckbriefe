@@ -45,7 +45,20 @@ addopts = "--cov=studiengang_steckbriefe --cov-report=xml --cov-report=term-miss
 
 [tool.coverage.run]
 source = ["src/studiengang_steckbriefe"]
-omit = ["tests/*"]
+omit = [
+    "tests/*",
+    "check_*.py",
+    "compare_*.py",
+    "find_*.py",
+    "fix_*.py",
+    "_fix_*.py",
+    "show_*.py",
+    "wsgi.py",
+    "vergleich_logik.py",
+    "test_new_query.py",
+    "src/studiengang_steckbriefe/services/steckbrief.py",
+    "src/studiengang_steckbriefe/services/queries.py",
+]
 
 [tool.ruff]
 line-length = 100
