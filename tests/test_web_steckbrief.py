@@ -64,27 +64,63 @@ class TestWeitereEndpoints:
         with patch(f"{_SVC}.get_studienerfolg", return_value={}):
             assert authenticated_client.get("/api/steckbrief/WM/studienerfolg").status_code == 200
 
+    def test_studienerfolg_fehler_gibt_500(self, authenticated_client):
+        with patch(f"{_SVC}.get_studienerfolg", side_effect=Exception("Fehler")):
+            assert authenticated_client.get("/api/steckbrief/WM/studienerfolg").status_code == 500
+
     def test_anrechnungen(self, authenticated_client):
         with patch(f"{_SVC}.get_anrechnungen", return_value={}):
             assert authenticated_client.get("/api/steckbrief/WM/anrechnungen").status_code == 200
+
+    def test_anrechnungen_fehler_gibt_500(self, authenticated_client):
+        with patch(f"{_SVC}.get_anrechnungen", side_effect=Exception("Fehler")):
+            assert authenticated_client.get("/api/steckbrief/WM/anrechnungen").status_code == 500
 
     def test_uebergang(self, authenticated_client):
         with patch(f"{_SVC}.get_uebergang", return_value={}):
             assert authenticated_client.get("/api/steckbrief/WM/uebergang").status_code == 200
 
+    def test_uebergang_fehler_gibt_500(self, authenticated_client):
+        with patch(f"{_SVC}.get_uebergang", side_effect=Exception("Fehler")):
+            assert authenticated_client.get("/api/steckbrief/WM/uebergang").status_code == 500
+
     def test_herkunft(self, authenticated_client):
         with patch(f"{_SVC}.get_herkunft", return_value={}):
             assert authenticated_client.get("/api/steckbrief/WM/herkunft").status_code == 200
 
+    def test_herkunft_fehler_gibt_500(self, authenticated_client):
+        with patch(f"{_SVC}.get_herkunft", side_effect=Exception("Fehler")):
+            assert authenticated_client.get("/api/steckbrief/WM/herkunft").status_code == 500
+
     def test_zuzahler(self, authenticated_client):
         with patch(f"{_SVC}.get_zuzahler", return_value={}):
             assert authenticated_client.get("/api/steckbrief/WM/zuzahler").status_code == 200
+
+    def test_zuzahler_fehler_gibt_500(self, authenticated_client):
+        with patch(f"{_SVC}.get_zuzahler", side_effect=Exception("Fehler")):
+            assert authenticated_client.get("/api/steckbrief/WM/zuzahler").status_code == 500
 
     def test_vertiefungsrichtungen(self, authenticated_client):
         with patch(f"{_SVC}.get_vertiefungsrichtungen", return_value={}):
             r = authenticated_client.get("/api/steckbrief/WM/vertiefungsrichtungen")
             assert r.status_code == 200
 
+    def test_vertiefungsrichtungen_fehler_gibt_500(self, authenticated_client):
+        with patch(f"{_SVC}.get_vertiefungsrichtungen", side_effect=Exception("Fehler")):
+            r = authenticated_client.get("/api/steckbrief/WM/vertiefungsrichtungen")
+            assert r.status_code == 500
+
     def test_hszen(self, authenticated_client):
         with patch(f"{_SVC}.get_aktive_hszen", return_value=[]):
             assert authenticated_client.get("/api/steckbrief/WM/hszen").status_code == 200
+
+    def test_hszen_fehler_gibt_500(self, authenticated_client):
+        with patch(f"{_SVC}.get_aktive_hszen", side_effect=Exception("Fehler")):
+            assert authenticated_client.get("/api/steckbrief/WM/hszen").status_code == 500
+
+
+class TestStammdatenFehler:
+    def test_service_fehler_gibt_500(self, authenticated_client):
+        with patch(f"{_SVC}.get_stammdaten", side_effect=Exception("DB-Fehler")):
+            response = authenticated_client.get("/api/steckbrief/WM/stammdaten")
+        assert response.status_code == 500
