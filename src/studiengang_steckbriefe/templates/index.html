@@ -880,6 +880,7 @@
         function fmtInt(v) { return v == null ? '–' : Math.round(Number(v)).toLocaleString('de-DE'); }
         function fmtPct(v) { return v == null ? '–' : Number(v).toFixed(1).replace('.', ',') + '%'; }
         function fmtDec1(v) { return v == null ? '–' : Number(v).toFixed(1).replace('.', ','); }
+        const _loadingHtml = `<div class="sections-grid"><div class="section" style="grid-column: 1/-1; text-align: center; padding: 48px 24px;"><div style="font-size: 48px; margin-bottom: 16px;">⏳</div><h3 style="color: var(--fom-gray-600); margin-bottom: 8px;">Daten werden berechnet …</h3><p style="color: var(--fom-gray-400); font-size: 14px;">Der erste Abruf dauert etwas länger. Die Seite aktualisiert sich automatisch.</p></div></div>`;
 
         // ─── HSBs aus API laden ───
         async function loadHSBsFromAPI() {
@@ -1110,25 +1111,39 @@
                 { ep: 'zuzahler', key: 'zuzahler' },
                 { ep: 'vertiefungsrichtungen', key: 'vertiefungsrichtungen' },
             ];
-            slowEndpoints.forEach(({ ep, key }) => {
-                fetch(`${API_BASE}/steckbrief/${pk}/${ep}`)
-                    .then(r => r.json())
-                    .then(res => {
-                        if (res && res.success) {
-                            programme[key] = res.data;
-                            console.log(`[API] ${pk}/${ep} ${res.data ? 'geladen' : 'keine Daten'}`);
-                        } else {
-                            programme[key] = null;
-                            console.warn(`[API] ${pk}/${ep} kein Erfolg:`, res);
-                        }
-                        rerender();
-                    })
-                    .catch(err => {
-                        programme[key] = null;
-                        rerender();
-                        console.warn(`[API] ${pk}/${ep} fehlgeschlagen:`, err.message);
-                    });
-            });
+            const _fetchWithRetry = (ep, key, retryDelay = 30000, maxRetries = 3) => {
+                const attempt = (retriesLeft) => {
+                    fetch(`${API_BASE}/steckbrief/${pk}/${ep}`)
+                        .then(r => {
+                            if (r.status === 504) throw Object.assign(new Error('504'), { is504: true });
+                            return r.json();
+                        })
+                        .then(res => {
+                            if (res && res.success) {
+                                programme[key] = res.data;
+                                console.log(`[API] ${pk}/${ep} ${res.data ? 'geladen' : 'keine Daten'}`);
+                            } else {
+                                programme[key] = null;
+                                console.warn(`[API] ${pk}/${ep} kein Erfolg:`, res);
+                            }
+                            rerender();
+                        })
+                        .catch(err => {
+                            if (err.is504 && retriesLeft > 0) {
+                                console.warn(`[API] ${pk}/${ep} 504 – Retry in ${retryDelay / 1000}s (${retriesLeft} versuche übrig)`);
+                                programme[key] = '__loading__';
+                                rerender();
+                                setTimeout(() => attempt(retriesLeft - 1), retryDelay);
+                            } else {
+                                programme[key] = null;
+                                rerender();
+                                console.warn(`[API] ${pk}/${ep} fehlgeschlagen:`, err.message);
+                            }
+                        });
+                };
+                attempt(maxRetries);
+            };
+            slowEndpoints.forEach(({ ep, key }) => _fetchWithRetry(ep, key));
 
             updateDatenstand();
         }
@@ -1424,13 +1439,13 @@
                 rahmendaten: programme.rahmendaten !== undefined,
                 trends: true, // API-basiert, immer verfügbar
                 studienbeginner: true,
-                anrechnungen: programme.anrechnungen !== undefined,
+                anrechnungen: programme.anrechnungen !== undefined && programme.anrechnungen !== null,
                 stammdaten: programme.stammdaten !== undefined,
-                studienerfolg: programme.studienerfolg !== undefined,
+                studienerfolg: programme.studienerfolg !== undefined && programme.studienerfolg !== null,
                 uebergang: programme.uebergangsverhalten !== undefined,
                 herkunft: programme.herkunft_master !== undefined,
-                zuzahler: programme.zuzahler !== undefined,
-                vertiefung: programme.vertiefungsrichtungen !== undefined
+                zuzahler: programme.zuzahler !== undefined && programme.zuzahler !== null,
+                vertiefung: programme.vertiefungsrichtungen !== undefined && programme.vertiefungsrichtungen !== null
             };
             
             // Wenn der gewünschte Tab im neuen Programm nicht existiert, auf rahmendaten zurückfallen
@@ -1662,6 +1677,7 @@
         }
 
         function renderAnrechnungen(p) {
+            if (p.anrechnungen === '__loading__') return _loadingHtml;
             if (!p.anrechnungen) return `<div class="sections-grid"><div class="section" style="grid-column: 1/-1; text-align: center; padding: 48px 24px;"><div style="font-size: 48px; margin-bottom: 16px;">📚</div><h3 style="color: var(--fom-gray-600); margin-bottom: 8px;">Keine Anrechnungsdaten vorhanden</h3><p style="color: var(--fom-gray-400); font-size: 14px;">Für diesen Studiengang liegen keine Anrechnungsdaten vor.</p></div></div>`;
             const a = getHSZFilteredAnrechnungen(p);
             const hszLabel = currentHSZ !== 'Alle' ? ` <span style="font-size: 13px; font-weight: 400; opacity: 0.85;">(${currentHSZ})</span>` : '';
@@ -1777,6 +1793,7 @@
         }
 
         function renderStudienerfolg(p) {
+            if (p.studienerfolg === '__loading__') return _loadingHtml;
             if (!p.studienerfolg) return `<div class="sections-grid"><div class="section" style="grid-column: 1/-1; text-align: center; padding: 48px 24px;"><div style="font-size: 48px; margin-bottom: 16px;">📊</div><h3 style="color: var(--fom-gray-600); margin-bottom: 8px;">Keine Studienabschluss-Daten vorhanden</h3><p style="color: var(--fom-gray-400); font-size: 14px;">Für diesen Studiengang liegen keine Studienabschluss-Daten vor.</p></div></div>`;
             const s = getHSZFilteredStudienerfolg(p);
             if (!s) return;
@@ -2957,6 +2974,7 @@
         }
 
         function renderZuzahler(p) {
+            if (p.zuzahler === '__loading__') return _loadingHtml;
             if (!p.zuzahler) return `<div class="sections-grid"><div class="section" style="grid-column: 1/-1; text-align: center; padding: 48px 24px;"><div style="font-size: 48px; margin-bottom: 16px;">💰</div><h3 style="color: var(--fom-gray-600); margin-bottom: 8px;">Keine Zuzahler-Daten vorhanden</h3><p style="color: var(--fom-gray-400); font-size: 14px;">Für diesen Studiengang liegen keine Zuzahler-Daten vor.</p></div></div>`;
             const z = getHSZFilteredZuzahler(p);
             if (!z) return `<div class="sections-grid"><div class="section" style="grid-column: 1/-1; text-align: center; padding: 48px 24px;"><div style="font-size: 48px; margin-bottom: 16px;">💰</div><h3 style="color: var(--fom-gray-600); margin-bottom: 8px;">Keine Zuzahler-Daten vorhanden</h3><p style="color: var(--fom-gray-400); font-size: 14px;">Für diesen Studiengang liegen keine Zuzahler-Daten vor.</p></div></div>`;
@@ -3104,6 +3122,7 @@
         }
 
         function renderVertiefungsrichtungen(p) {
+            if (p.vertiefungsrichtungen === '__loading__') return _loadingHtml;
             const v = p.vertiefungsrichtungen;
             if (!v) return `<div class="sections-grid"><div class="section" style="grid-column: 1/-1; text-align: center; padding: 48px 24px;"><div style="font-size: 48px; margin-bottom: 16px;">📐</div><h3 style="color: var(--fom-gray-600); margin-bottom: 8px;">Keine Vertiefungsrichtungen vorhanden</h3><p style="color: var(--fom-gray-400); font-size: 14px;">Für diesen Studiengang liegen keine Daten zu Vertiefungsrichtungen vor.</p></div></div>`;
             const fmtCell = (val) => val === null ? `<td style="text-align: center; padding: 6px 8px; font-size: 11px;"></td>` : `<td style="text-align: center; padding: 6px 8px; font-size: 11px;">${fmtInt(val)}</td>`;
