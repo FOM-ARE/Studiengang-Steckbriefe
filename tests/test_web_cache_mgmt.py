@@ -101,40 +101,24 @@ class TestPreload:
         assert response.status_code == 401
 
     def test_success(self, authenticated_client):
-        from unittest.mock import MagicMock
-
-        mock_hsbs = [{"programmes": [{"produktkuerzel": "WM"}, {"produktkuerzel": "WI"}]}]
-        endpoint_fns = [
-            "get_trends",
-            "get_stammdaten",
-            "get_studienerfolg",
-            "get_uebergang",
-            "get_herkunft",
-            "get_zuzahler",
-            "get_vertiefungsrichtungen",
-            "get_rahmendaten",
-            "get_aktive_hszen",
-            "get_anrechnungen",
-        ]
-        with patch(
-            "studiengang_steckbriefe.services.steckbrief.get_studiengaenge",
-            return_value=mock_hsbs,
-        ):
-            with patch.multiple(
-                "studiengang_steckbriefe.services.steckbrief",
-                **{name: MagicMock(return_value={}) for name in endpoint_fns},
-            ):
-                response = authenticated_client.post("/api/cache/preload")
+        """Preload antwortet sofort mit 200 und startet Hintergrund-Thread."""
+        with patch("threading.Thread") as mock_thread:
+            mock_thread.return_value.start = lambda: None
+            response = authenticated_client.post("/api/cache/preload")
         assert response.status_code == 200
         data = response.get_json()
         assert data["success"] is True
-        assert data["studiengaenge"] == 2
+        assert data["message"] == "Preload gestartet"
 
     def test_fehler_bei_get_studiengaenge_gibt_500(self, authenticated_client):
-        with patch(
-            "studiengang_steckbriefe.services.steckbrief.get_studiengaenge",
-            side_effect=Exception("DB down"),
-        ):
+        """Wenn Preload bereits laeuft, gibt es eine entsprechende Meldung."""
+        import studiengang_steckbriefe.web.cache_mgmt as cm
+
+        original = cm._preload_status.copy()
+        cm._preload_status["running"] = True
+        try:
             response = authenticated_client.post("/api/cache/preload")
-        assert response.status_code == 500
-        assert response.get_json()["success"] is False
+        finally:
+            cm._preload_status.update(original)
+        assert response.status_code == 200
+        assert "laeuft bereits" in response.get_json()["message"]

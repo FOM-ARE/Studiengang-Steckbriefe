@@ -55,11 +55,16 @@ def clear_entry(produktkuerzel: str, endpoint: str):
     return jsonify(success=True, message=f"Cache-Eintrag '{cache_key}' geloescht")
 
 
-@cache_mgmt_bp.route("/api/cache/preload", methods=["POST"])
-@admin_required
-def preload():
-    """Waermt den Cache fuer alle aktiven Studiengaenge vor."""
+_preload_status: dict = {"running": False, "done": 0, "total": 0, "errors": []}
+
+
+def _run_preload_background(app) -> None:
+    """Fuehrt den Cache-Warmup im Hintergrund-Thread aus."""
+    import logging
+
     from studiengang_steckbriefe.services import steckbrief as svc
+
+    logger = logging.getLogger(__name__)
 
     _ENDPOINTS = [
         svc.get_trends,
@@ -74,34 +79,79 @@ def preload():
         svc.get_anrechnungen,
     ]
 
-    try:
-        hsbs = svc.get_studiengaenge()
-    except Exception as e:
-        traceback.print_exc()
-        return jsonify(success=False, error=str(e)), 500
+    with app.app_context():
+        try:
+            hsbs = svc.get_studiengaenge()
+        except Exception as e:
+            logger.error("Preload: get_studiengaenge fehlgeschlagen: %s", e)
+            _preload_status["running"] = False
+            return
 
-    all_pks: set[str] = set()
-    for hsb in hsbs:
-        for sg in hsb.get("programmes", []):
-            pk = sg.get("produktkuerzel")
-            if pk:
-                all_pks.add(pk)
+        all_pks: list[str] = sorted(
+            {
+                sg.get("produktkuerzel")
+                for hsb in hsbs
+                for sg in hsb.get("programmes", [])
+                if sg.get("produktkuerzel")
+            }
+        )
+        _preload_status["total"] = len(all_pks) * len(_ENDPOINTS)
+        _preload_status["done"] = 0
+        _preload_status["errors"] = []
 
-    errors: list[str] = []
-    endpoints_loaded = 0
-    for pk in sorted(all_pks):
-        for fn in _ENDPOINTS:
-            try:
-                fn(pk)
-                endpoints_loaded += 1
-            except Exception as e:
-                errors.append(f"{fn.__name__}({pk}): {e}")
+        for pk in all_pks:
+            for fn in _ENDPOINTS:
+                try:
+                    fn(pk)
+                except Exception as e:
+                    _preload_status["errors"].append(f"{fn.__name__}({pk}): {e}")
+                    logger.warning("Preload %s(%s): %s", fn.__name__, pk, e)
+                _preload_status["done"] += 1
+
+        _preload_status["running"] = False
+        logger.info(
+            "Preload abgeschlossen: %d/%d, %d Fehler",
+            _preload_status["done"],
+            _preload_status["total"],
+            len(_preload_status["errors"]),
+        )
+
+
+@cache_mgmt_bp.route("/api/cache/preload", methods=["POST"])
+@admin_required
+def preload():
+    """Startet den Cache-Warmup asynchron im Hintergrund."""
+    import threading
+
+    from flask import current_app
+
+    if _preload_status["running"]:
+        return jsonify(
+            success=True,
+            message="Preload laeuft bereits",
+            done=_preload_status["done"],
+            total=_preload_status["total"],
+        )
+
+    _preload_status["running"] = True
+    app = current_app._get_current_object()
+    t = threading.Thread(target=_run_preload_background, args=(app,), daemon=True)
+    t.start()
 
     return jsonify(
-        success=True,
-        studiengaenge=len(all_pks),
-        endpoints_loaded=endpoints_loaded,
-        errors=errors,
+        success=True, message="Preload gestartet", studiengaenge=0, endpoints_loaded=0, errors=[]
+    )
+
+
+@cache_mgmt_bp.route("/api/cache/preload/status", methods=["GET"])
+@admin_required
+def preload_status():
+    """Gibt den aktuellen Status des Preload-Vorgangs zurueck."""
+    return jsonify(
+        running=_preload_status["running"],
+        done=_preload_status["done"],
+        total=_preload_status["total"],
+        errors=_preload_status["errors"],
     )
 
 
