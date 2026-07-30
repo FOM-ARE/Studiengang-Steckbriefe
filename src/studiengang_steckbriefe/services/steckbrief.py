@@ -1415,6 +1415,22 @@ def _lookup_fachsemester(modules_without_sem: set, variants: list) -> tuple[dict
     return vp_aliases_mapping, grow_mapping
 
 
+def _resolve_ue_sem_key(r: dict, vp_aliases_mapping: dict, grow_mapping: dict) -> int:
+    """Ermittelt den Fachsemester-Key fuer eine UE-Zeile (VP > Aliases > Grow > 0)."""
+    modul_id = int(r["ModulFID"]) if r["ModulFID"] else None
+    sem_vp = int(r["Fachsemester"]) if r["Fachsemester"] is not None else None
+    if sem_vp is not None:
+        return sem_vp
+    if modul_id is not None:
+        sem_aliases = vp_aliases_mapping.get(modul_id)
+        if sem_aliases is not None:
+            return int(sem_aliases)
+        sem_grow = grow_mapping.get(modul_id)
+        if sem_grow is not None:
+            return int(sem_grow)
+    return 0
+
+
 def _aggregate_ue(
     ue_rows: list, vp_aliases_mapping: dict, grow_mapping: dict
 ) -> tuple[dict, dict]:
@@ -1423,16 +1439,10 @@ def _aggregate_ue(
     ue_by_semester: dict = {}
     for r in ue_rows:
         typ = r["UETyp"]
-        val = int(r["TotalUE"] or 0)
         if typ not in ("praxis", "virtuell", "folgt"):
             continue
-        modul_id = int(r["ModulFID"]) if r["ModulFID"] else None
-        sem_vp = int(r["Fachsemester"]) if r["Fachsemester"] is not None else None
-        sem_aliases = vp_aliases_mapping.get(modul_id) if modul_id else None
-        sem_grow = grow_mapping.get(modul_id) if modul_id else None
-        sem = sem_vp if sem_vp is not None else (sem_aliases if sem_aliases is not None else sem_grow)
-        sem_key = int(sem) if sem is not None else 0
-
+        val = int(r["TotalUE"] or 0)
+        sem_key = _resolve_ue_sem_key(r, vp_aliases_mapping, grow_mapping)
         ue[typ] = ue.get(typ, 0) + val
         ue_by_semester.setdefault(sem_key, {})
         ue_by_semester[sem_key][typ] = ue_by_semester[sem_key].get(typ, 0) + val
