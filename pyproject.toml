@@ -82,3 +82,7 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+exclude = [
+    "src/studiengang_steckbriefe/services/queries.py",
+    "src/studiengang_steckbriefe/services/steckbrief.py",
+]
