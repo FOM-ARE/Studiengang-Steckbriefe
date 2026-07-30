@@ -131,16 +131,20 @@ class TestRunPreloadBackground:
 
     def test_endpoints_werden_fuer_alle_pks_aufgerufen(self, app):
         """Alle Endpunkt-Funktionen werden fuer jeden PK aufgerufen."""
+        from unittest.mock import MagicMock, patch
+
         import studiengang_steckbriefe.web.cache_mgmt as cm
         from studiengang_steckbriefe.web.cache_mgmt import _run_preload_background
-        from unittest.mock import MagicMock, patch
 
         hsb_data = [{"programmes": [{"produktkuerzel": "BBA"}]}]
         mock_fn = MagicMock()
 
         with (
             app.app_context(),
-            patch("studiengang_steckbriefe.services.steckbrief.get_studiengaenge", return_value=hsb_data),
+            patch(
+                "studiengang_steckbriefe.services.steckbrief.get_studiengaenge",
+                return_value=hsb_data,
+            ),
             patch("studiengang_steckbriefe.services.steckbrief.get_trends", mock_fn),
             patch("studiengang_steckbriefe.services.steckbrief.get_stammdaten", mock_fn),
             patch("studiengang_steckbriefe.services.steckbrief.get_studienerfolg", mock_fn),
@@ -159,9 +163,10 @@ class TestRunPreloadBackground:
 
     def test_endpoint_fehler_wird_als_error_gespeichert(self, app):
         """Ein fehlgeschlagener Endpoint landet in errors, Preload laeuft weiter."""
+        from unittest.mock import patch
+
         import studiengang_steckbriefe.web.cache_mgmt as cm
         from studiengang_steckbriefe.web.cache_mgmt import _run_preload_background
-        from unittest.mock import patch
 
         hsb_data = [{"programmes": [{"produktkuerzel": "BBA"}]}]
 
@@ -170,14 +175,20 @@ class TestRunPreloadBackground:
 
         with (
             app.app_context(),
-            patch("studiengang_steckbriefe.services.steckbrief.get_studiengaenge", return_value=hsb_data),
+            patch(
+                "studiengang_steckbriefe.services.steckbrief.get_studiengaenge",
+                return_value=hsb_data,
+            ),
             patch("studiengang_steckbriefe.services.steckbrief.get_trends", fail_trends),
             patch("studiengang_steckbriefe.services.steckbrief.get_stammdaten", return_value={}),
             patch("studiengang_steckbriefe.services.steckbrief.get_studienerfolg", return_value={}),
             patch("studiengang_steckbriefe.services.steckbrief.get_uebergang", return_value={}),
             patch("studiengang_steckbriefe.services.steckbrief.get_herkunft", return_value={}),
             patch("studiengang_steckbriefe.services.steckbrief.get_zuzahler", return_value={}),
-            patch("studiengang_steckbriefe.services.steckbrief.get_vertiefungsrichtungen", return_value={}),
+            patch(
+                "studiengang_steckbriefe.services.steckbrief.get_vertiefungsrichtungen",
+                return_value={},
+            ),
             patch("studiengang_steckbriefe.services.steckbrief.get_rahmendaten", return_value={}),
             patch("studiengang_steckbriefe.services.steckbrief.get_aktive_hszen", return_value={}),
             patch("studiengang_steckbriefe.services.steckbrief.get_anrechnungen", return_value={}),

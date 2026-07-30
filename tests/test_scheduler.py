@@ -72,6 +72,7 @@ class TestRunScheduler:
     def test_fuehrt_reload_aus_wenn_nicht_gestoppt(self, app):
         """_run_scheduler fuehrt scheduled_cache_reload aus wenn stop_event nicht gesetzt."""
         import threading
+
         import studiengang_steckbriefe.services.scheduler as sched_mod
 
         stop_event = threading.Event()
@@ -92,6 +93,7 @@ class TestRunScheduler:
     def test_fehler_im_reload_wird_abgefangen(self, app):
         """_run_scheduler laeuft weiter wenn scheduled_cache_reload eine Exception wirft."""
         import threading
+
         import studiengang_steckbriefe.services.scheduler as sched_mod
 
         stop_event = threading.Event()

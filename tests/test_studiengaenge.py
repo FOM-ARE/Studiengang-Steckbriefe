@@ -1,4 +1,5 @@
 """Tests fuer Studiengaenge-Endpoint."""
+
 from unittest.mock import patch
 
 
@@ -19,7 +20,10 @@ def test_studiengaenge_authenticated(authenticated_client):
 def test_studiengaenge_gibt_daten_zurueck(authenticated_client):
     """Gibt Studiengaenge-Daten als JSON zurueck."""
     mock_data = [{"name": "Wirtschaft & Management", "programmes": []}]
-    with patch("studiengang_steckbriefe.web.studiengaenge.svc.get_studiengaenge", return_value=mock_data):
+    with patch(
+        "studiengang_steckbriefe.web.studiengaenge.svc.get_studiengaenge",
+        return_value=mock_data,
+    ):
         response = authenticated_client.get("/api/studiengaenge")
     assert response.status_code == 200
     data = response.get_json()

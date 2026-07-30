@@ -1,4 +1,4 @@
-﻿"""SQL-Query-Builder und -Templates fuer Studiengang-Steckbriefe.
+"""SQL-Query-Builder und -Templates fuer Studiengang-Steckbriefe.
 
 Dieses Modul generiert alle SQL-Queries dynamisch aus der Konfigurations-DB.
 Die Queries werden beim Start und bei Config-Reload neu gebaut.

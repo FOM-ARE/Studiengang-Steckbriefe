@@ -207,10 +207,11 @@ class TestQueryDb:
                 db_connector.query_db("SELECT 1")
 
 
-class TestReleaseConnection:
+class TestReleaseConnectionPoolFull:
     def test_close_bei_vollem_pool(self, app):
         """Wenn der Pool voll ist, wird die Verbindung geschlossen."""
         import queue
+
         from studiengang_steckbriefe.services import db_connector
 
         mock_conn = MagicMock()
@@ -222,6 +223,7 @@ class TestReleaseConnection:
     def test_close_exception_bei_vollem_pool_wird_ignoriert(self, app):
         """Wenn close() beim Verwerfen wirft, bleibt kein Fehler."""
         import queue
+
         from studiengang_steckbriefe.services import db_connector
 
         mock_conn = MagicMock()

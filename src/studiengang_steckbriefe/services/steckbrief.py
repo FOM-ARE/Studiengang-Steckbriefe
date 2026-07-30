@@ -203,11 +203,16 @@ def _row_for_semester(rows: list[dict], jahr: int, typ: str) -> dict | None:
 
 
 def _append_semester_werte(
-    ss: dict | None, ws: dict | None,
-    zeitreihe_ss: list, zeitreihe_ws: list,
-    fom_avg_ss: list, fom_avg_ws: list,
-    beginner_ss: list, beginner_ws: list,
-    beginner_fom_avg_ss: list, beginner_fom_avg_ws: list,
+    ss: dict | None,
+    ws: dict | None,
+    zeitreihe_ss: list,
+    zeitreihe_ws: list,
+    fom_avg_ss: list,
+    fom_avg_ws: list,
+    beginner_ss: list,
+    beginner_ws: list,
+    beginner_fom_avg_ss: list,
+    beginner_fom_avg_ws: list,
 ) -> None:
     """Haengt Werte fuer ein Jahres-SS/WS-Paar an alle Zeitreihenlisten an."""
     zeitreihe_ss.append(int(ss["Gesamtstudierende_SG"]) if ss else 0)
@@ -231,18 +236,27 @@ def _build_zeitreihe(rows: list[dict], jahre: list) -> tuple:
         ss = _row_for_semester(rows, jahr, "SS")
         ws = _row_for_semester(rows, jahr, "WS")
         _append_semester_werte(
-            ss, ws,
-            zeitreihe_ss, zeitreihe_ws,
-            fom_avg_ss, fom_avg_ws,
-            beginner_ss, beginner_ws,
-            beginner_fom_avg_ss, beginner_fom_avg_ws,
+            ss,
+            ws,
+            zeitreihe_ss,
+            zeitreihe_ws,
+            fom_avg_ss,
+            fom_avg_ws,
+            beginner_ss,
+            beginner_ws,
+            beginner_fom_avg_ss,
+            beginner_fom_avg_ws,
         )
 
     return (
-        zeitreihe_ss, zeitreihe_ws,
-        fom_avg_ss, fom_avg_ws,
-        beginner_ss, beginner_ws,
-        beginner_fom_avg_ss, beginner_fom_avg_ws,
+        zeitreihe_ss,
+        zeitreihe_ws,
+        fom_avg_ss,
+        fom_avg_ws,
+        beginner_ss,
+        beginner_ws,
+        beginner_fom_avg_ss,
+        beginner_fom_avg_ws,
     )
 
 
@@ -280,10 +294,19 @@ def _calc_beginner_delta(beginner_ss: list, beginner_ws: list) -> tuple[int, str
 
 def _hsz_apply_studierende(hsz_data: dict, hsz: str, jahr: int, r: dict) -> None:
     """Traegt Studierenden- und Beginner-Werte fuer ein Semester in hsz_data ein."""
-    hsz_data[hsz].setdefault(jahr, {
-        "ss": 0, "ws": 0, "beginner_ss": 0, "beginner_ws": 0,
-        "avg_ss": 0, "avg_ws": 0, "avg_beginner_ss": 0, "avg_beginner_ws": 0,
-    })
+    hsz_data[hsz].setdefault(
+        jahr,
+        {
+            "ss": 0,
+            "ws": 0,
+            "beginner_ss": 0,
+            "beginner_ws": 0,
+            "avg_ss": 0,
+            "avg_ws": 0,
+            "avg_beginner_ss": 0,
+            "avg_beginner_ws": 0,
+        },
+    )
     if r["SemesterTyp"] == "SS":
         hsz_data[hsz][jahr]["ss"] = int(r["Gesamtstudierende"])
         hsz_data[hsz][jahr]["beginner_ss"] = int(r["Beginner"])
@@ -295,11 +318,19 @@ def _hsz_apply_studierende(hsz_data: dict, hsz: str, jahr: int, r: dict) -> None
 def _hsz_apply_avg(hsz_data: dict, hsz: str, jahr: int, r: dict) -> None:
     """Traegt Durchschnittswerte fuer ein Semester in hsz_data ein."""
     if r["SemesterTyp"] == "SS":
-        hsz_data[hsz][jahr]["avg_ss"] = round(float(r["AvgStudierende"])) if r["AvgStudierende"] else 0
-        hsz_data[hsz][jahr]["avg_beginner_ss"] = round(float(r["AvgBeginner"])) if r["AvgBeginner"] else 0
+        hsz_data[hsz][jahr]["avg_ss"] = (
+            round(float(r["AvgStudierende"])) if r["AvgStudierende"] else 0
+        )
+        hsz_data[hsz][jahr]["avg_beginner_ss"] = (
+            round(float(r["AvgBeginner"])) if r["AvgBeginner"] else 0
+        )
     else:
-        hsz_data[hsz][jahr]["avg_ws"] = round(float(r["AvgStudierende"])) if r["AvgStudierende"] else 0
-        hsz_data[hsz][jahr]["avg_beginner_ws"] = round(float(r["AvgBeginner"])) if r["AvgBeginner"] else 0
+        hsz_data[hsz][jahr]["avg_ws"] = (
+            round(float(r["AvgStudierende"])) if r["AvgStudierende"] else 0
+        )
+        hsz_data[hsz][jahr]["avg_beginner_ws"] = (
+            round(float(r["AvgBeginner"])) if r["AvgBeginner"] else 0
+        )
 
 
 def _build_hsz_data(hsz_rows: list[dict], hsz_avg_rows: list[dict]) -> dict:
@@ -350,10 +381,14 @@ def get_trends(produktkuerzel: str) -> dict:
     jahre = sorted(set(r["Jahr"] for r in rows), reverse=True)
 
     (
-        zeitreihe_ss, zeitreihe_ws,
-        fom_avg_ss, fom_avg_ws,
-        beginner_ss, beginner_ws,
-        beginner_fom_avg_ss, beginner_fom_avg_ws,
+        zeitreihe_ss,
+        zeitreihe_ws,
+        fom_avg_ss,
+        fom_avg_ws,
+        beginner_ss,
+        beginner_ws,
+        beginner_fom_avg_ss,
+        beginner_fom_avg_ws,
     ) = _build_zeitreihe(rows, jahre)
 
     aktuell, delta_str = _calc_delta_str(zeitreihe_ss, zeitreihe_ws)
@@ -425,7 +460,11 @@ def _detail_block(r: dict | None) -> tuple:
     staatsang = {"inlaendisch": _pct(inl, t), "auslaendisch": _pct(ausl, t), "dueh": _pct(unbek, t)}
     dual_v = int(r.get("Dual", 0) or 0)
     tages = int(r.get("Tagesstudium", 0) or 0)
-    dual = {"dual": _pct(dual_v, t), "tagesstudium": _pct(tages, t), "nein": _pct(t - dual_v - tages, t)}
+    dual = {
+        "dual": _pct(dual_v, t),
+        "tagesstudium": _pct(tages, t),
+        "nein": _pct(t - dual_v - tages, t),
+    }
     offene_v = int(r.get("OffeneHochschule", 0) or 0)
     intern = {"ja": _pct(offene_v, t), "nein": _pct(t - offene_v, t)}
     return geschlecht, staatsang, dual, intern
@@ -435,8 +474,17 @@ def _sum_detail_rows(rows_list: list) -> dict | None:
     """Aggregiert Detail-Zeilen ueber alle HSZ."""
     if not rows_list:
         return None
-    agg = {"Total": 0, "Weiblich": 0, "Maennlich": 0, "Inlaendisch": 0,
-           "Auslaendisch": 0, "Unbekannt": 0, "Dual": 0, "Tagesstudium": 0, "OffeneHochschule": 0}
+    agg = {
+        "Total": 0,
+        "Weiblich": 0,
+        "Maennlich": 0,
+        "Inlaendisch": 0,
+        "Auslaendisch": 0,
+        "Unbekannt": 0,
+        "Dual": 0,
+        "Tagesstudium": 0,
+        "OffeneHochschule": 0,
+    }
     for r in rows_list:
         for k in agg:
             agg[k] += int(r.get(k, 0) or 0)
@@ -456,7 +504,8 @@ def _weighted_alter_zeitreihe(alter_rows: list) -> tuple[list, list]:
             sem_alter[sk]["cnt"] += cnt
     overall = [
         {"Semesterkuerzel": sk, "DurchschnittsAlter": d["sum"] / d["cnt"]}
-        for sk, d in sorted(sem_alter.items()) if d["cnt"] > 0
+        for sk, d in sorted(sem_alter.items())
+        if d["cnt"] > 0
     ]
     filtered = _semester_filter_7(overall)
     return (
@@ -481,8 +530,12 @@ def _build_hsz_stammdaten(
 ) -> dict:
     """Berechnet Stammdaten-Block fuer ein einzelnes HSZ."""
     h_alter_filtered = _semester_filter_7([r for r in alter_rows if r.get("HSZ") == hsz])
-    h_aktuell = _sum_detail_rows([r for r in detail_rows if r["Zeitraum"] == "aktuell" and r.get("HSZ") == hsz])
-    h_rest = _sum_detail_rows([r for r in detail_rows if r["Zeitraum"] == "rest" and r.get("HSZ") == hsz])
+    h_aktuell = _sum_detail_rows(
+        [r for r in detail_rows if r["Zeitraum"] == "aktuell" and r.get("HSZ") == hsz]
+    )
+    h_rest = _sum_detail_rows(
+        [r for r in detail_rows if r["Zeitraum"] == "rest" and r.get("HSZ") == hsz]
+    )
     h_g_akt, h_s_akt, h_d_akt, h_i_akt = _detail_block(h_aktuell)
     h_g_rest, h_s_rest, h_d_rest, h_i_rest = _detail_block(h_rest)
     h_beruf_akt, h_total_akt = _aggregate_beruf(beruf_rows, "aktuell")
@@ -490,13 +543,19 @@ def _build_hsz_stammdaten(
         [r for r in beruf_rows if r.get("HSZ") == hsz], "rest"
     )
     h_beruf_akt = sorted(
-        [(r["Berufsausbildung"], int(r["Cnt"])) for r in beruf_rows
-         if r["Zeitraum"] == "aktuell" and r.get("HSZ") == hsz],
+        [
+            (r["Berufsausbildung"], int(r["Cnt"]))
+            for r in beruf_rows
+            if r["Zeitraum"] == "aktuell" and r.get("HSZ") == hsz
+        ],
         key=lambda x: -x[1],
     )
     h_beruf_rest = sorted(
-        [(r["Berufsausbildung"], int(r["Cnt"])) for r in beruf_rows
-         if r["Zeitraum"] == "rest" and r.get("HSZ") == hsz],
+        [
+            (r["Berufsausbildung"], int(r["Cnt"]))
+            for r in beruf_rows
+            if r["Zeitraum"] == "rest" and r.get("HSZ") == hsz
+        ],
         key=lambda x: -x[1],
     )
     h_total_akt = sum(cnt for _, cnt in h_beruf_akt) or 1
@@ -513,10 +572,14 @@ def _build_hsz_stammdaten(
         "top_berufsausbildungen_rest": [
             {"name": ba, "pct": round(cnt / h_total_rest * 100, 1)} for ba, cnt in h_beruf_rest[:5]
         ],
-        "geschlecht_aktuell": h_g_akt, "geschlecht_rest": h_g_rest,
-        "staatsang_aktuell": h_s_akt, "staatsang_rest": h_s_rest,
-        "dual_aktuell": h_d_akt, "dual_rest": h_d_rest,
-        "intern_aktuell": h_i_akt, "intern_rest": h_i_rest,
+        "geschlecht_aktuell": h_g_akt,
+        "geschlecht_rest": h_g_rest,
+        "staatsang_aktuell": h_s_akt,
+        "staatsang_rest": h_s_rest,
+        "dual_aktuell": h_d_akt,
+        "dual_rest": h_d_rest,
+        "intern_aktuell": h_i_akt,
+        "intern_rest": h_i_rest,
     }
 
 
@@ -569,10 +632,14 @@ def get_stammdaten(produktkuerzel: str) -> dict:
         "top_berufsausbildungen_rest": [
             {"name": ba, "pct": round(cnt / total_rest * 100, 1)} for ba, cnt in beruf_rest_raw[:5]
         ],
-        "geschlecht_aktuell": g_akt, "geschlecht_rest": g_rest,
-        "staatsang_aktuell": s_akt, "staatsang_rest": s_rest,
-        "dual_aktuell": d_akt, "dual_rest": d_rest,
-        "intern_aktuell": i_akt, "intern_rest": i_rest,
+        "geschlecht_aktuell": g_akt,
+        "geschlecht_rest": g_rest,
+        "staatsang_aktuell": s_akt,
+        "staatsang_rest": s_rest,
+        "dual_aktuell": d_akt,
+        "dual_rest": d_rest,
+        "intern_aktuell": i_akt,
+        "intern_rest": i_rest,
         "hsz_detail": hsz_detail,
     }
     cache_set(cache_key, data)
@@ -610,9 +677,7 @@ def _calc_fachsem_pct(rows: list, labels_num: list) -> list:
         pivot.setdefault(fs, {}).setdefault(cluster, {})
         pivot[fs][cluster][rsz] = pivot[fs][cluster].get(rsz, 0) + int(r["Anzahl"])
 
-    kohortengroesse = (
-        sum(sum(sum(rv.values()) for rv in cv.values()) for cv in pivot.values()) or 1
-    )
+    kohortengroesse = sum(sum(sum(rv.values()) for rv in cv.values()) for cv in pivot.values()) or 1
 
     result = []
     for lbl in labels_num:
@@ -620,8 +685,11 @@ def _calc_fachsem_pct(rows: list, labels_num: list) -> list:
         result.append(round(abbrecher_fs / kohortengroesse * 100, 1))
 
     for cluster, rsz_filter in [
-        ("Abbrecher", None), ("Wechsler", None),
-        ("Eingeschrieben", 0), ("Eingeschrieben", 1), ("Absolvent", None),
+        ("Abbrecher", None),
+        ("Wechsler", None),
+        ("Eingeschrieben", 0),
+        ("Eingeschrieben", 1),
+        ("Absolvent", None),
     ]:
         total = _calc_cluster_total(pivot, labels_num, cluster, rsz_filter)
         result.append(round(total / kohortengroesse * 100, 1))
@@ -644,8 +712,10 @@ def _aggregate_fs_sg(fs_sg: list) -> list:
     for r in fs_sg:
         key = (r["Fachsem"], r["AusstiegsCluster"], int(r["RSZ"]))
         agg[key] = agg.get(key, 0) + int(r["Anzahl"])
-    return [{"Fachsem": k[0], "AusstiegsCluster": k[1], "RSZ": k[2], "Anzahl": v}
-            for k, v in agg.items()]
+    return [
+        {"Fachsem": k[0], "AusstiegsCluster": k[1], "RSZ": k[2], "Anzahl": v}
+        for k, v in agg.items()
+    ]
 
 
 def get_studienerfolg(produktkuerzel: str) -> dict:
@@ -680,7 +750,11 @@ def get_studienerfolg(produktkuerzel: str) -> dict:
         key=_sem_sort_key,
     )
     fs_labels = [f"{lbl}. FS" if lbl != "9+" else "9+" for lbl in fs_labels_num] + [
-        "Abbrecher", "Wechsler", "aktiv\n(regulaer)", "aktiv\n(Verlaengerung)", "Absolventen",
+        "Abbrecher",
+        "Wechsler",
+        "aktiv\n(regulaer)",
+        "aktiv\n(Verlaengerung)",
+        "Absolventen",
     ]
 
     fs_sg_overall = _aggregate_fs_sg(fs_sg)
@@ -1078,8 +1152,10 @@ def _compute_herkunft_stats(data_rows: list) -> dict:
         uebersicht[cat] = uebersicht.get(cat, 0) + 1
 
     uebersicht_keys = [
-        "am_jetzigen_vorher", "am_jetzigen_nachher",
-        "an_anderem_vorher", "an_anderem_nachher",
+        "am_jetzigen_vorher",
+        "am_jetzigen_nachher",
+        "an_anderem_vorher",
+        "an_anderem_nachher",
     ]
     return {
         "bachelor_studiengaenge": _top10_pct(sg_counts, total),
@@ -1089,17 +1165,25 @@ def _compute_herkunft_stats(data_rows: list) -> dict:
         "top_studienrichtungen_gleich": _top10_pct(studienrichtungen_gleich, total),
         "top_studienrichtungen_anders": _top10_pct(studienrichtungen_anders, total),
         "uebersicht_labels": [
-            "am jetzigen HSZ\n(vorher)", "am jetzigen HSZ\n(nachher)",
-            "an anderem HSZ\n(vorher)", "an anderem HSZ\n(nachher)",
+            "am jetzigen HSZ\n(vorher)",
+            "am jetzigen HSZ\n(nachher)",
+            "an anderem HSZ\n(vorher)",
+            "an anderem HSZ\n(nachher)",
         ],
         "uebersicht_vals": [round(uebersicht.get(k, 0) / total * 100, 1) for k in uebersicht_keys],
     }
 
 
 _HERKUNFT_SERIES_KEYS = [
-    "nicht_intern", "am_jetzigen_hsz",
-    "am_jetzigen_ueberschneidung", "am_jetzigen_folgesemester", "am_jetzigen_pause",
-    "an_anderem_hsz", "an_anderem_ueberschneidung", "an_anderem_folgesemester", "an_anderem_pause",
+    "nicht_intern",
+    "am_jetzigen_hsz",
+    "am_jetzigen_ueberschneidung",
+    "am_jetzigen_folgesemester",
+    "am_jetzigen_pause",
+    "an_anderem_hsz",
+    "an_anderem_ueberschneidung",
+    "an_anderem_folgesemester",
+    "an_anderem_pause",
 ]
 _HERKUNFT_PARENT_MAP = {
     "am_jetzigen_ueberschneidung": "am_jetzigen_hsz",
@@ -1197,8 +1281,9 @@ def get_herkunft(produktkuerzel: str) -> dict:
     herkunft_series = _build_kohorten_series(kohorten, kohorte_rows_map)
 
     hsz_set = sorted(set(r.get("M_HSZ") for r in rows if r.get("M_HSZ")))
-    hsz_detail = {hsz: _compute_herkunft_stats([r for r in rows if r.get("M_HSZ") == hsz])
-                  for hsz in hsz_set}
+    hsz_detail = {
+        hsz: _compute_herkunft_stats([r for r in rows if r.get("M_HSZ") == hsz]) for hsz in hsz_set
+    }
 
     data = {
         **sg_stats,
@@ -1212,23 +1297,35 @@ def get_herkunft(produktkuerzel: str) -> dict:
             sg_stats["bachelor_studiengaenge"], "B_SG", kohorten, kohorte_rows_map
         ),
         "bachelor_studiengaenge_gleich": _add_kohorten_werte_pct(
-            sg_stats["bachelor_studiengaenge_gleich"], "B_SG", kohorten, kohorte_rows_map,
-            filter_val=1
+            sg_stats["bachelor_studiengaenge_gleich"],
+            "B_SG",
+            kohorten,
+            kohorte_rows_map,
+            filter_val=1,
         ),
         "bachelor_studiengaenge_anders": _add_kohorten_werte_pct(
-            sg_stats["bachelor_studiengaenge_anders"], "B_SG", kohorten, kohorte_rows_map,
-            filter_val=0
+            sg_stats["bachelor_studiengaenge_anders"],
+            "B_SG",
+            kohorten,
+            kohorte_rows_map,
+            filter_val=0,
         ),
         "top_studienrichtungen": _add_kohorten_werte_cnt(
             sg_stats["top_studienrichtungen"], "B_Familie", kohorten, kohorte_rows_map
         ),
         "top_studienrichtungen_gleich": _add_kohorten_werte_cnt(
-            sg_stats["top_studienrichtungen_gleich"], "B_Familie", kohorten, kohorte_rows_map,
-            filter_val=1
+            sg_stats["top_studienrichtungen_gleich"],
+            "B_Familie",
+            kohorten,
+            kohorte_rows_map,
+            filter_val=1,
         ),
         "top_studienrichtungen_anders": _add_kohorten_werte_cnt(
-            sg_stats["top_studienrichtungen_anders"], "B_Familie", kohorten, kohorte_rows_map,
-            filter_val=0
+            sg_stats["top_studienrichtungen_anders"],
+            "B_Familie",
+            kohorten,
+            kohorte_rows_map,
+            filter_val=0,
         ),
     }
     cache_set(cache_key, data)
@@ -1449,9 +1546,7 @@ def _resolve_ue_sem_key(r: dict, vp_aliases_mapping: dict, grow_mapping: dict) -
     return 0
 
 
-def _aggregate_ue(
-    ue_rows: list, vp_aliases_mapping: dict, grow_mapping: dict
-) -> tuple[dict, dict]:
+def _aggregate_ue(ue_rows: list, vp_aliases_mapping: dict, grow_mapping: dict) -> tuple[dict, dict]:
     """Aggregiert UE-Stunden nach Typ und Fachsemester."""
     ue: dict = {}
     ue_by_semester: dict = {}
