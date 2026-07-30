@@ -194,6 +194,42 @@ class TestQueryDb:
 
         mock_conn.close.assert_called_once()
 
+    def test_exception_close_wirft_ebenfalls(self, app):
+        """Wenn close() beim Exception-Handling selbst wirft, wird das ignoriert."""
+        from studiengang_steckbriefe.services import db_connector
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.side_effect = Exception("Cursor-Fehler")
+        mock_conn.close.side_effect = Exception("Close-Fehler")
+
+        with patch.object(db_connector, "get_connection", return_value=mock_conn):
+            with pytest.raises(Exception, match="Cursor-Fehler"):
+                db_connector.query_db("SELECT 1")
+
+
+class TestReleaseConnection:
+    def test_close_bei_vollem_pool(self, app):
+        """Wenn der Pool voll ist, wird die Verbindung geschlossen."""
+        import queue
+        from studiengang_steckbriefe.services import db_connector
+
+        mock_conn = MagicMock()
+        with patch.object(db_connector, "_CONN_POOL") as mock_pool:
+            mock_pool.put_nowait.side_effect = queue.Full
+            db_connector.release_connection(mock_conn)
+        mock_conn.close.assert_called_once()
+
+    def test_close_exception_bei_vollem_pool_wird_ignoriert(self, app):
+        """Wenn close() beim Verwerfen wirft, bleibt kein Fehler."""
+        import queue
+        from studiengang_steckbriefe.services import db_connector
+
+        mock_conn = MagicMock()
+        mock_conn.close.side_effect = Exception("Close-Fehler")
+        with patch.object(db_connector, "_CONN_POOL") as mock_pool:
+            mock_pool.put_nowait.side_effect = queue.Full
+            db_connector.release_connection(mock_conn)  # darf nicht werfen
+
 
 class TestQueryDbMulti:
     def test_fuehrt_mehrere_queries_aus(self, app):
@@ -227,3 +263,15 @@ class TestQueryDbMulti:
                 db_connector.query_db_multi([("SELECT 1", None)])
 
         mock_conn.close.assert_called_once()
+
+    def test_exception_close_wirft_ebenfalls(self, app):
+        """Wenn close() beim Exception-Handling in query_db_multi selbst wirft."""
+        from studiengang_steckbriefe.services import db_connector
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.side_effect = Exception("Multi-Fehler")
+        mock_conn.close.side_effect = Exception("Close-Fehler")
+
+        with patch.object(db_connector, "get_connection", return_value=mock_conn):
+            with pytest.raises(Exception, match="Multi-Fehler"):
+                db_connector.query_db_multi([("SELECT 1", None)])

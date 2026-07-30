@@ -95,10 +95,98 @@ class TestDatenstand:
         assert response.get_json()["datenstand"] is None
 
 
-class TestPreload:
+class TestPreloadStatus:
     def test_erfordert_admin(self, client):
-        response = client.post("/api/cache/preload")
+        response = client.get("/api/cache/preload/status")
         assert response.status_code == 401
+
+    def test_gibt_status_zurueck(self, authenticated_client):
+        import studiengang_steckbriefe.web.cache_mgmt as cm
+
+        cm._preload_status.update({"running": False, "done": 3, "total": 10, "errors": ["err1"]})
+        response = authenticated_client.get("/api/cache/preload/status")
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["done"] == 3
+        assert data["total"] == 10
+        assert data["errors"] == ["err1"]
+
+
+class TestRunPreloadBackground:
+    def test_get_studiengaenge_fehler_setzt_running_false(self, app):
+        """Wenn get_studiengaenge wirft, wird running=False gesetzt."""
+        import studiengang_steckbriefe.web.cache_mgmt as cm
+        from studiengang_steckbriefe.web.cache_mgmt import _run_preload_background
+
+        cm._preload_status["running"] = True
+        with (
+            app.app_context(),
+            __import__("unittest.mock", fromlist=["patch"]).patch(
+                "studiengang_steckbriefe.services.steckbrief.get_studiengaenge",
+                side_effect=RuntimeError("DB down"),
+            ),
+        ):
+            _run_preload_background(app)
+        assert cm._preload_status["running"] is False
+
+    def test_endpoints_werden_fuer_alle_pks_aufgerufen(self, app):
+        """Alle Endpunkt-Funktionen werden fuer jeden PK aufgerufen."""
+        import studiengang_steckbriefe.web.cache_mgmt as cm
+        from studiengang_steckbriefe.web.cache_mgmt import _run_preload_background
+        from unittest.mock import MagicMock, patch
+
+        hsb_data = [{"programmes": [{"produktkuerzel": "BBA"}]}]
+        mock_fn = MagicMock()
+
+        with (
+            app.app_context(),
+            patch("studiengang_steckbriefe.services.steckbrief.get_studiengaenge", return_value=hsb_data),
+            patch("studiengang_steckbriefe.services.steckbrief.get_trends", mock_fn),
+            patch("studiengang_steckbriefe.services.steckbrief.get_stammdaten", mock_fn),
+            patch("studiengang_steckbriefe.services.steckbrief.get_studienerfolg", mock_fn),
+            patch("studiengang_steckbriefe.services.steckbrief.get_uebergang", mock_fn),
+            patch("studiengang_steckbriefe.services.steckbrief.get_herkunft", mock_fn),
+            patch("studiengang_steckbriefe.services.steckbrief.get_zuzahler", mock_fn),
+            patch("studiengang_steckbriefe.services.steckbrief.get_vertiefungsrichtungen", mock_fn),
+            patch("studiengang_steckbriefe.services.steckbrief.get_rahmendaten", mock_fn),
+            patch("studiengang_steckbriefe.services.steckbrief.get_aktive_hszen", mock_fn),
+            patch("studiengang_steckbriefe.services.steckbrief.get_anrechnungen", mock_fn),
+        ):
+            _run_preload_background(app)
+
+        assert cm._preload_status["running"] is False
+        assert mock_fn.call_count == 10  # 10 Endpunkte x 1 PK
+
+    def test_endpoint_fehler_wird_als_error_gespeichert(self, app):
+        """Ein fehlgeschlagener Endpoint landet in errors, Preload laeuft weiter."""
+        import studiengang_steckbriefe.web.cache_mgmt as cm
+        from studiengang_steckbriefe.web.cache_mgmt import _run_preload_background
+        from unittest.mock import patch
+
+        hsb_data = [{"programmes": [{"produktkuerzel": "BBA"}]}]
+
+        def fail_trends(pk):
+            raise RuntimeError("fail")
+
+        with (
+            app.app_context(),
+            patch("studiengang_steckbriefe.services.steckbrief.get_studiengaenge", return_value=hsb_data),
+            patch("studiengang_steckbriefe.services.steckbrief.get_trends", fail_trends),
+            patch("studiengang_steckbriefe.services.steckbrief.get_stammdaten", return_value={}),
+            patch("studiengang_steckbriefe.services.steckbrief.get_studienerfolg", return_value={}),
+            patch("studiengang_steckbriefe.services.steckbrief.get_uebergang", return_value={}),
+            patch("studiengang_steckbriefe.services.steckbrief.get_herkunft", return_value={}),
+            patch("studiengang_steckbriefe.services.steckbrief.get_zuzahler", return_value={}),
+            patch("studiengang_steckbriefe.services.steckbrief.get_vertiefungsrichtungen", return_value={}),
+            patch("studiengang_steckbriefe.services.steckbrief.get_rahmendaten", return_value={}),
+            patch("studiengang_steckbriefe.services.steckbrief.get_aktive_hszen", return_value={}),
+            patch("studiengang_steckbriefe.services.steckbrief.get_anrechnungen", return_value={}),
+        ):
+            _run_preload_background(app)
+
+        assert cm._preload_status["running"] is False
+        assert len(cm._preload_status["errors"]) == 1
+        assert "fail_trends" in cm._preload_status["errors"][0]
 
     def test_success(self, authenticated_client):
         """Preload antwortet sofort mit 200 und startet Hintergrund-Thread."""

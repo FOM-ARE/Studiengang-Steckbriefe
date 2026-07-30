@@ -43,12 +43,72 @@ class TestInitScheduler:
         assert sched_mod._scheduler_thread.name == "daily-cache-reload"
 
 
-class TestShutdownScheduler:
-    def test_shutdown_setzt_stop_event(self, app):
-        init_scheduler(app)
-        assert sched_mod._stop_event is not None
-        shutdown_scheduler()
-        assert sched_mod._stop_event is None
+class TestWarmupCache:
+    def test_warmup_laedt_studiengaenge(self, app):
+        """_warmup_cache ruft get_studiengaenge im App-Context auf."""
+        import studiengang_steckbriefe.services.scheduler as sched_mod
+
+        sched_mod._flask_app = app
+        with patch(
+            "studiengang_steckbriefe.services.steckbrief.get_studiengaenge",
+            return_value=[{"name": "WM"}],
+        ) as mock_get:
+            sched_mod._warmup_cache()
+        mock_get.assert_called_once()
+
+    def test_warmup_schluckt_exception(self, app):
+        """_warmup_cache wirft keine Exception wenn get_studiengaenge fehlschlaegt."""
+        import studiengang_steckbriefe.services.scheduler as sched_mod
+
+        sched_mod._flask_app = app
+        with patch(
+            "studiengang_steckbriefe.services.steckbrief.get_studiengaenge",
+            side_effect=RuntimeError("DB down"),
+        ):
+            sched_mod._warmup_cache()  # darf nicht werfen
+
+
+class TestRunScheduler:
+    def test_fuehrt_reload_aus_wenn_nicht_gestoppt(self, app):
+        """_run_scheduler fuehrt scheduled_cache_reload aus wenn stop_event nicht gesetzt."""
+        import threading
+        import studiengang_steckbriefe.services.scheduler as sched_mod
+
+        stop_event = threading.Event()
+        calls = []
+
+        def fake_reload():
+            calls.append(1)
+            stop_event.set()  # nach erstem Aufruf stoppen
+
+        with (
+            patch("studiengang_steckbriefe.services.scheduler.scheduled_cache_reload", fake_reload),
+            patch.object(stop_event, "wait", lambda timeout=None: None),
+        ):
+            sched_mod._run_scheduler(stop_event)
+
+        assert len(calls) == 1
+
+    def test_fehler_im_reload_wird_abgefangen(self, app):
+        """_run_scheduler laeuft weiter wenn scheduled_cache_reload eine Exception wirft."""
+        import threading
+        import studiengang_steckbriefe.services.scheduler as sched_mod
+
+        stop_event = threading.Event()
+        call_count = [0]
+
+        def fail_once():
+            call_count[0] += 1
+            stop_event.set()
+            raise RuntimeError("Reload-Fehler")
+
+        with (
+            patch("studiengang_steckbriefe.services.scheduler.scheduled_cache_reload", fail_once),
+            patch.object(stop_event, "wait", lambda timeout=None: None),
+        ):
+            sched_mod._run_scheduler(stop_event)  # darf nicht werfen
+
+        assert call_count[0] == 1
 
     def test_shutdown_ohne_vorherigen_start_kein_fehler(self):
         shutdown_scheduler()
