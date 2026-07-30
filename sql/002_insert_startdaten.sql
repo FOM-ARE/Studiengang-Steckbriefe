@@ -34,171 +34,218 @@ INSERT INTO RpStudiengangSteckbriefeHochschulzentrum (Name, IstAusgeschlossen, S
 SET @bachelor = 'Bachelor';
 SET @master   = 'Master';
 
+-- Hochschulbereich-IDs (vermeiden duplizierter Literale – plsql:S1192)
+SET @hsb_wm  = (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WM');
+SET @hsb_gus = (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'GuS');
+SET @hsb_wp  = (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WP');
+SET @hsb_it  = (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'IT');
+SET @hsb_wr  = (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WR');
+SET @hsb_ing = (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'Ing');
+
 INSERT INTO RpStudiengangSteckbriefeStudiengang (BasisPk, Anzeigename, Abschluss, HochschulbereichId) VALUES
-('BAIM', 'Angewandte Informatik (BAIM)',       @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'IT')),
-('BBA',  'Business Administration (BBA)',       @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WM')),
-('BGS',  'Gesundheits- und Sozialmanagement (BGS)', @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'GuS')),
-('BWW',  'Betriebswirtschaft & Wirtschaftspsychologie (BWW)', @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WP')),
-('BME',  'Mechatronik (BME)',                   @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'Ing')),
-('BMM',  'Marketing & Digitale Medien (BMM)',   @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WM')),
-('BPVP', 'Primary Care Management (BPVP)',      @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'GuS')),
-('BSA',  'Soziale Arbeit (BSA)',                @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'GuS')),
-('BST',  'Steuerrecht (BST)',                   @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WR')),
-('BWI',  'Wirtschaftsinformatik (BWI)',         @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'IT')),
-('BWK',  'Wirtschaftsrecht (BWK)',              @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WR')),
-('MBA',  'Master of Business Administration (MBA)', @master, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WM')),
-('MBB',  'Business Consulting & Digital Mgmt (MBB)', @master, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WM')),
-('MME_HSBO', 'Mechatronik + HSBO (MME_HSBO)',   @master, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'Ing')),
-('MMT_HSBO', 'Maschinenbau + HSBO (MMT_HSBO)',  @master, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'Ing')),
-('MWING', 'Wirtschaftsingenieurwesen (MWING)',  @master, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'Ing'));
+('BAIM',     'Angewandte Informatik (BAIM)',                         @bachelor, @hsb_it),
+('BBA',      'Business Administration (BBA)',                         @bachelor, @hsb_wm),
+('BGS',      'Gesundheits- und Sozialmanagement (BGS)',              @bachelor, @hsb_gus),
+('BWW',      'Betriebswirtschaft & Wirtschaftspsychologie (BWW)',    @bachelor, @hsb_wp),
+('BME',      'Mechatronik (BME)',                                     @bachelor, @hsb_ing),
+('BMM',      'Marketing & Digitale Medien (BMM)',                    @bachelor, @hsb_wm),
+('BPVP',     'Primary Care Management (BPVP)',                       @bachelor, @hsb_gus),
+('BSA',      'Soziale Arbeit (BSA)',                                  @bachelor, @hsb_gus),
+('BST',      'Steuerrecht (BST)',                                     @bachelor, @hsb_wr),
+('BWI',      'Wirtschaftsinformatik (BWI)',                           @bachelor, @hsb_it),
+('BWK',      'Wirtschaftsrecht (BWK)',                                @bachelor, @hsb_wr),
+('MBA',      'Master of Business Administration (MBA)',               @master,   @hsb_wm),
+('MBB',      'Business Consulting & Digital Mgmt (MBB)',             @master,   @hsb_wm),
+('MME_HSBO', 'Mechatronik + HSBO (MME_HSBO)',                        @master,   @hsb_ing),
+('MMT_HSBO', 'Maschinenbau + HSBO (MMT_HSBO)',                       @master,   @hsb_ing),
+('MWING',    'Wirtschaftsingenieurwesen (MWING)',                     @master,   @hsb_ing);
 
 -- ─── 4) RpStudiengangSteckbriefeProduktKuerzelAlias ──────────────────────────────
+-- Studiengang-IDs (vermeiden duplizierter Literale – plsql:S1192)
+SET @sg_baim  = (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BAIM');
+SET @sg_bba   = (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BBA');
+SET @sg_bgs   = (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BGS');
+SET @sg_bww   = (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BWW');
+SET @sg_bme   = (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BME');
+SET @sg_bmm   = (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BMM');
+SET @sg_bpvp  = (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BPVP');
+SET @sg_bsa   = (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BSA');
+SET @sg_bst   = (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BST');
+SET @sg_bwi   = (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BWI');
+SET @sg_bwk   = (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BWK');
+SET @sg_mba   = (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'MBA');
+SET @sg_mbb   = (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'MBB');
+SET @sg_mme   = (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'MME_HSBO');
+SET @sg_mmt   = (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'MMT_HSBO');
+SET @sg_mwing = (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'MWING');
+
 INSERT INTO RpStudiengangSteckbriefeProduktKuerzelAlias (AliasPk, StudiengangId) VALUES
-('BAIM_CN',     (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BAIM')),
-('BBAa_Fonty',  (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BBA')),
-('BBAb',        (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BBA')),
-('BBAd',        (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BBA')),
-('BBAv_ATA',    (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BBA')),
-('BBA_AM',      (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BBA')),
-('BBA_ATA',     (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BBA')),
-('BBA_PM',      (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BBA')),
-('BBA_AT',      (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BBA')),
-('BGS_HY',     (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BGS')),
-('BHAd',       (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BWW')),
-('BLOd',       (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BWW')),
-('BWWa',       (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BWW')),
-('BWWd',       (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BWW')),
-('BMEe_INT',   (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BME')),
-('BMMq',       (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BMM')),
-('BPCM',       (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BPVP')),
-('BSAk',       (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BSA')),
-('BSTd',       (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BST')),
-('BWIK',       (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BWI')),
-('BWId',       (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BWI')),
-('BWI_BS',     (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BWI')),
-('BWKa',       (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'BWK')),
-('MBAe_IN',    (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'MBA')),
-('MBAe_INT',   (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'MBA')),
-('MBBe_IN',    (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'MBB')),
-('MBBe_INT',   (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'MBB')),
-('MME_+_HSBO', (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'MME_HSBO')),
-('MMT_+_HSBO', (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'MMT_HSBO')),
-('MWING_PG',   (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'MWING')),
-('MWINGe_INT', (SELECT Id FROM RpStudiengangSteckbriefeStudiengang WHERE BasisPk = 'MWING'));
+('BAIM_CN',     @sg_baim),
+('BBAa_Fonty',  @sg_bba),
+('BBAb',        @sg_bba),
+('BBAd',        @sg_bba),
+('BBAv_ATA',    @sg_bba),
+('BBA_AM',      @sg_bba),
+('BBA_ATA',     @sg_bba),
+('BBA_PM',      @sg_bba),
+('BBA_AT',      @sg_bba),
+('BGS_HY',      @sg_bgs),
+('BHAd',        @sg_bww),
+('BLOd',        @sg_bww),
+('BWWa',        @sg_bww),
+('BWWd',        @sg_bww),
+('BMEe_INT',    @sg_bme),
+('BMMq',        @sg_bmm),
+('BPCM',        @sg_bpvp),
+('BSAk',        @sg_bsa),
+('BSTd',        @sg_bst),
+('BWIK',        @sg_bwi),
+('BWId',        @sg_bwi),
+('BWI_BS',      @sg_bwi),
+('BWKa',        @sg_bwk),
+('MBAe_IN',     @sg_mba),
+('MBAe_INT',    @sg_mba),
+('MBBe_IN',     @sg_mbb),
+('MBBe_INT',    @sg_mbb),
+('MME_+_HSBO',  @sg_mme),
+('MMT_+_HSBO',  @sg_mmt),
+('MWING_PG',    @sg_mwing),
+('MWINGe_INT',  @sg_mwing);
 
 -- ─── 5) RpStudiengangSteckbriefeAnrechnungRegel ──────────────────────────────────
 
+-- Regeltypen, Operatoren und Kategorien (vermeiden duplizierter Literale – plsql:S1192)
+SET @rt_anrg  = 'ANRECHNUNGSGRUND';
+SET @rt_la    = 'LEISTUNGSART';
+SET @rt_at    = 'ANERKANNTTEXT';
+SET @kat_oh   = 'OFFENE_HOCHSCHULE';
+SET @kat_hs   = 'HOCHSCHULISCH';
+SET @kat_berf = 'BERUFLICH';
+SET @op_eq    = 'EQUALS';
+SET @op_like  = 'LIKE';
+
 -- Typ ANRECHNUNGSGRUND: Diese Werte zaehlen als "Offene Hochschule"
 INSERT INTO RpStudiengangSteckbriefeAnrechnungRegel (Regeltyp, AbgleichOperator, AbgleichWert, Kategorie, Prioritaet) VALUES
-('ANRECHNUNGSGRUND', 'EQUALS', 'andere BW/IBW',          'OFFENE_HOCHSCHULE', 10),
-('ANRECHNUNGSGRUND', 'EQUALS', 'andere Fortbildungen',   'OFFENE_HOCHSCHULE', 10),
-('ANRECHNUNGSGRUND', 'EQUALS', 'eigene BW/IBW',          'OFFENE_HOCHSCHULE', 10),
-('ANRECHNUNGSGRUND', 'EQUALS', 'eigene Ök',              'OFFENE_HOCHSCHULE', 10),
-('ANRECHNUNGSGRUND', 'EQUALS', 'Fachkaufleute',          'OFFENE_HOCHSCHULE', 10),
-('ANRECHNUNGSGRUND', 'EQUALS', 'IHK-Betriebswirt',       'OFFENE_HOCHSCHULE', 10),
-('ANRECHNUNGSGRUND', 'EQUALS', 'IHK-Fachwirt',           'OFFENE_HOCHSCHULE', 10);
+(@rt_anrg, @op_eq, 'andere BW/IBW',        @kat_oh, 10),
+(@rt_anrg, @op_eq, 'andere Fortbildungen', @kat_oh, 10),
+(@rt_anrg, @op_eq, 'eigene BW/IBW',        @kat_oh, 10),
+(@rt_anrg, @op_eq, 'eigene Ök',            @kat_oh, 10),
+(@rt_anrg, @op_eq, 'Fachkaufleute',        @kat_oh, 10),
+(@rt_anrg, @op_eq, 'IHK-Betriebswirt',     @kat_oh, 10),
+(@rt_anrg, @op_eq, 'IHK-Fachwirt',         @kat_oh, 10);
 
 -- Typ LEISTUNGSART: Klassifikation Hochschulisch / Beruflich
 INSERT INTO RpStudiengangSteckbriefeAnrechnungRegel (Regeltyp, AbgleichOperator, AbgleichWert, Kategorie, Prioritaet) VALUES
-('LEISTUNGSART', 'LIKE', '%Hochschulische Leistung%',            'HOCHSCHULISCH', 10),
-('LEISTUNGSART', 'LIKE', '%Ausbildung%',                         'BERUFLICH',     20),
-('LEISTUNGSART', 'LIKE', '%Ausserhochschulische Leistung%',      'BERUFLICH',     20);
+(@rt_la, @op_like, '%Hochschulische Leistung%',       @kat_hs,   10),
+(@rt_la, @op_like, '%Ausbildung%',                    @kat_berf, 20),
+(@rt_la, @op_like, '%Ausserhochschulische Leistung%', @kat_berf, 20);
 
 -- Typ ANERKANNTTEXT: Fallback-Pattern wenn keine Antraege vorhanden
 INSERT INTO RpStudiengangSteckbriefeAnrechnungRegel (Regeltyp, AbgleichOperator, AbgleichWert, Kategorie, Prioritaet) VALUES
-('ANERKANNTTEXT', 'LIKE', '%HS%',              'HOCHSCHULISCH', 10),
-('ANERKANNTTEXT', 'LIKE', '%Auslandsstudium%', 'HOCHSCHULISCH', 10),
-('ANERKANNTTEXT', 'LIKE', '%ERASMUS%',         'HOCHSCHULISCH', 10);
+(@rt_at, @op_like, '%HS%',              @kat_hs, 10),
+(@rt_at, @op_like, '%Auslandsstudium%', @kat_hs, 10),
+(@rt_at, @op_like, '%ERASMUS%',         @kat_hs, 10);
 -- Alles andere → BERUFLICH (Default im Code, kein Eintrag noetig)
 
 -- ─── 6) RpStudiengangSteckbriefeEndpunktParameter ────────────────────────────────
 
+-- Endpunkt- und Parameternamen-Konstanten (vermeiden duplizierter Literale – plsql:S1192)
+SET @ep_anr  = 'anrechnungen';
+SET @pn_jz   = 'jahre_zurueck';
+SET @pn_kj   = 'kohorten_jahre';
+SET @pn_sg   = 'statusgruppe';
+SET @sg_uv   = 'Gesamtstudierende mit UV';
+
 INSERT INTO RpStudiengangSteckbriefeEndpunktParameter (EndpunktCode, ParamName, ParamWert, Beschreibung) VALUES
-('trends',              'jahre_zurueck',        '4',            'Studierendenzahlen: Jahre zurueck'),
-('stammdaten',          'jahre_zurueck',        '2',            'Stammdaten-Zeitraum'),
-('studienerfolg',       'kohorten_jahre',       '5',            'Kohortenjahre fuer Abbrecherquote'),
-('uebergang',           'kohorten_jahre',       '5',            'Kohortenjahre fuer Uebergang B→M'),
-('herkunft',            'kohorten_jahre',       '5',            'Kohortenjahre fuer Herkunft M←B'),
-('vertiefung',          'datum_von',            '2018-09-01',   'Vertiefungsrichtungen: ab Datum'),
-('vertiefung',          'datum_bis',            '2021-09-01',   'Vertiefungsrichtungen: bis Datum'),
-('hochschulzertifikate','datum_von',            '2021-08-01',   'Hochschulzertifikate: ab Datum'),
-('zuzahler',            'jahre_zurueck',        '4',            'Zuzahler-Zeitraum'),
-('anrechnungen',        'semester_zurueck',     '6',            'Anrechnungen: letzte X Semester');
+('trends',              @pn_jz,             '4',            'Studierendenzahlen: Jahre zurueck'),
+('stammdaten',          @pn_jz,             '2',            'Stammdaten-Zeitraum'),
+('studienerfolg',       @pn_kj,             '5',            'Kohortenjahre fuer Abbrecherquote'),
+('uebergang',           @pn_kj,             '5',            'Kohortenjahre fuer Uebergang B→M'),
+('herkunft',            @pn_kj,             '5',            'Kohortenjahre fuer Herkunft M←B'),
+('vertiefung',          'datum_von',        '2018-09-01',   'Vertiefungsrichtungen: ab Datum'),
+('vertiefung',          'datum_bis',        '2021-09-01',   'Vertiefungsrichtungen: bis Datum'),
+('hochschulzertifikate','datum_von',        '2021-08-01',   'Hochschulzertifikate: ab Datum'),
+('zuzahler',            @pn_jz,             '4',            'Zuzahler-Zeitraum'),
+(@ep_anr,               'semester_zurueck', '6',            'Anrechnungen: letzte X Semester');
 
 -- StatusGruppen je Endpunkt
 INSERT INTO RpStudiengangSteckbriefeEndpunktParameter (EndpunktCode, ParamName, ParamWert, Beschreibung) VALUES
-('trends',         'statusgruppe',      'Gesamtstudierende mit UV',  'Filter fuer Studierendenzahlen'),
-('stammdaten',     'statusgruppe',      'Gesamtstudierende mit UV',  'Filter fuer Stammdaten'),
-('zuzahler',       'statusgruppe',      'Gesamtstudierende mit UV',  'Filter fuer Zuzahler'),
-('anrechnungen',   'statusgruppe_1',    'Beginner mit UV',           'Population Anrechnungen'),
-('anrechnungen',   'statusgruppe_2',    'Quereinsteiger mit UV',     'Population Anrechnungen');
+('trends',     @pn_sg,           @sg_uv,                   'Filter fuer Studierendenzahlen'),
+('stammdaten', @pn_sg,           @sg_uv,                   'Filter fuer Stammdaten'),
+('zuzahler',   @pn_sg,           @sg_uv,                   'Filter fuer Zuzahler'),
+(@ep_anr,      'statusgruppe_1', 'Beginner mit UV',         'Population Anrechnungen'),
+(@ep_anr,      'statusgruppe_2', 'Quereinsteiger mit UV',   'Population Anrechnungen');
 
 -- ─── 7) RpStudiengangSteckbriefeFilterliste ──────────────────────────────────────
 
+-- Typ-Konstanten (vermeiden duplizierter Literale – plsql:S1192)
+SET @incl = 'INCLUDE';
+SET @excl = 'EXCLUDE';
+
 -- HSB-Kuerzel die in der Studiengangliste ausgeschlossen werden
 INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ, Beschreibung) VALUES
-('HSB_EXCLUDE',       'OBS',         'EXCLUDE', 'Online Business School ausblenden'),
-('HSB_EXCLUDE',       'eufom BS',    'EXCLUDE', 'eufom ausblenden'),
-('HSB_EXCLUDE',       '',            'EXCLUDE', 'Leere HSB ausblenden');
+('HSB_EXCLUDE', 'OBS',      @excl, 'Online Business School ausblenden'),
+('HSB_EXCLUDE', 'eufom BS', @excl, 'eufom ausblenden'),
+('HSB_EXCLUDE', '',         @excl, 'Leere HSB ausblenden');
 
 -- Vertiefungsrichtungen: erlaubte Modulcontainer-Arten
 INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ) VALUES
-('VERTIEFUNG_ART',    'Vertiefungsrichtung',  'INCLUDE'),
-('VERTIEFUNG_ART',    'Wahlpflichtmodul',     'INCLUDE'),
-('VERTIEFUNG_ART',    'Wahlmodul',            'INCLUDE');
+('VERTIEFUNG_ART', 'Vertiefungsrichtung', @incl),
+('VERTIEFUNG_ART', 'Wahlpflichtmodul',   @incl),
+('VERTIEFUNG_ART', 'Wahlmodul',          @incl);
 
 -- Vertiefungsrichtungen: ausgeschlossene Fachgebiete
 INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ) VALUES
-('VERTIEFUNG_FACH',   'General Studies Wahlmodul ZEUGNISSE', 'EXCLUDE'),
-('VERTIEFUNG_FACH',   'Zusatzwahlfächer',                    'EXCLUDE');
+('VERTIEFUNG_FACH', 'General Studies Wahlmodul ZEUGNISSE', @excl),
+('VERTIEFUNG_FACH', 'Zusatzwahlfächer',                    @excl);
 
 -- UE-Berechnung: ausgeschlossene Raum-IDs
 INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ, Beschreibung) VALUES
-('UE_RAUMID',         '274',   'EXCLUDE', 'Testbuchungs-Raeume'),
-('UE_RAUMID',         '285',   'EXCLUDE', NULL),
-('UE_RAUMID',         '349',   'EXCLUDE', NULL),
-('UE_RAUMID',         '845',   'EXCLUDE', NULL),
-('UE_RAUMID',         '1608',  'EXCLUDE', NULL);
+('UE_RAUMID', '274',  @excl, 'Testbuchungs-Raeume'),
+('UE_RAUMID', '285',  @excl, NULL),
+('UE_RAUMID', '349',  @excl, NULL),
+('UE_RAUMID', '845',  @excl, NULL),
+('UE_RAUMID', '1608', @excl, NULL);
 
 -- UE-Berechnung: ausgeschlossene Veranstaltungstypen
 INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ) VALUES
-('UE_VERANSTTYP',     'Sonderveranstaltung',  'EXCLUDE');
+('UE_VERANSTTYP', 'Sonderveranstaltung', @excl);
 
 -- UE-Berechnung: erlaubte Produktgruppen
 INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ) VALUES
-('UE_PRODUKTGRUPPE',  'Studium',                      'INCLUDE'),
-('UE_PRODUKTGRUPPE',  'Akademische Weiterbildung',    'INCLUDE');
+('UE_PRODUKTGRUPPE', 'Studium',                   @incl),
+('UE_PRODUKTGRUPPE', 'Akademische Weiterbildung', @incl);
 
 -- UE-Berechnung: StatusRPL die beruecksichtigt werden
 INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ) VALUES
-('UE_STATUSRPL',      'A',  'INCLUDE'),
-('UE_STATUSRPL',      'P',  'INCLUDE');
+('UE_STATUSRPL', 'A', @incl),
+('UE_STATUSRPL', 'P', @incl);
 
 -- Zuzahler: ausgeschlossene Rechnungsempfaenger
 INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ) VALUES
-('ZUZAHLER_EMPF',     'Mitarbeiter',  'EXCLUDE');
+('ZUZAHLER_EMPF', 'Mitarbeiter', @excl);
 
 -- Zuzahler: KostenUebernahme-Typ
 INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ) VALUES
-('ZUZAHLER_KOSTENTYP', 'Arbeitgeber', 'INCLUDE');
+('ZUZAHLER_KOSTENTYP', 'Arbeitgeber', @incl);
 
 -- Leistungsarten die bei Anrechnungen ignoriert werden
 INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ) VALUES
-('LEISTUNGSART_IGNORE', 'Einschreibehindernispruefung', 'EXCLUDE'),
-('LEISTUNGSART_IGNORE', 'Kooperation',                  'EXCLUDE');
+('LEISTUNGSART_IGNORE', 'Einschreibehindernispruefung', @excl),
+('LEISTUNGSART_IGNORE', 'Kooperation',                  @excl);
 
 -- Duale Studierende: Studienformate die als dual gelten
 INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ) VALUES
-('DUAL_STUDIENFORMAT', 'ausbildungsintegrierend', 'INCLUDE'),
-('DUAL_STUDIENFORMAT', 'berufsintegrierend',      'INCLUDE'),
-('DUAL_STUDIENFORMAT', 'berufsbegleitend +',      'INCLUDE');
+('DUAL_STUDIENFORMAT', 'ausbildungsintegrierend', @incl),
+('DUAL_STUDIENFORMAT', 'berufsintegrierend',      @incl),
+('DUAL_STUDIENFORMAT', 'berufsbegleitend +',      @incl);
 
 -- Duale Studierende: Bildungsabschnitt-Bedingung
 INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ) VALUES
-('DUAL_BILDUNGSABSCHNITT', 'Erstausbildung', 'INCLUDE');
+('DUAL_BILDUNGSABSCHNITT', 'Erstausbildung', @incl);
 
 -- Ausrichtung die global excluded wird
 INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ) VALUES
-('AUSRICHTUNG_EXCLUDE', 'OBS', 'EXCLUDE');
+('AUSRICHTUNG_EXCLUDE', 'OBS', @excl);
 
 SELECT 'Alle Startdaten eingefuegt' AS Status;
