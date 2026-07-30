@@ -1,4 +1,4 @@
-USE HochschulorgaApps;
+﻿USE HochschulorgaApps;
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- Studiengang-Steckbriefe: Startdaten fuer Konfigurations-Tabellen
@@ -31,23 +31,26 @@ INSERT INTO RpStudiengangSteckbriefeHochschulzentrum (Name, IstAusgeschlossen, S
 ('Luxemburg',  TRUE,  905);
 
 -- ─── 3) RpStudiengangSteckbriefeStudiengang ──────────────────────────────────────
+SET @bachelor = 'Bachelor';
+SET @master   = 'Master';
+
 INSERT INTO RpStudiengangSteckbriefeStudiengang (BasisPk, Anzeigename, Abschluss, HochschulbereichId) VALUES
-('BAIM', 'Angewandte Informatik (BAIM)',       'Bachelor', (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'IT')),
-('BBA',  'Business Administration (BBA)',       'Bachelor', (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WM')),
-('BGS',  'Gesundheits- und Sozialmanagement (BGS)', 'Bachelor', (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'GuS')),
-('BWW',  'Betriebswirtschaft & Wirtschaftspsychologie (BWW)', 'Bachelor', (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WP')),
-('BME',  'Mechatronik (BME)',                   'Bachelor', (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'Ing')),
-('BMM',  'Marketing & Digitale Medien (BMM)',   'Bachelor', (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WM')),
-('BPVP', 'Primary Care Management (BPVP)',      'Bachelor', (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'GuS')),
-('BSA',  'Soziale Arbeit (BSA)',                'Bachelor', (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'GuS')),
-('BST',  'Steuerrecht (BST)',                   'Bachelor', (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WR')),
-('BWI',  'Wirtschaftsinformatik (BWI)',         'Bachelor', (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'IT')),
-('BWK',  'Wirtschaftsrecht (BWK)',              'Bachelor', (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WR')),
-('MBA',  'Master of Business Administration (MBA)', 'Master', (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WM')),
-('MBB',  'Business Consulting & Digital Mgmt (MBB)', 'Master', (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WM')),
-('MME_HSBO', 'Mechatronik + HSBO (MME_HSBO)',   'Master', (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'Ing')),
-('MMT_HSBO', 'Maschinenbau + HSBO (MMT_HSBO)',  'Master', (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'Ing')),
-('MWING', 'Wirtschaftsingenieurwesen (MWING)',  'Master', (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'Ing'));
+('BAIM', 'Angewandte Informatik (BAIM)',       @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'IT')),
+('BBA',  'Business Administration (BBA)',       @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WM')),
+('BGS',  'Gesundheits- und Sozialmanagement (BGS)', @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'GuS')),
+('BWW',  'Betriebswirtschaft & Wirtschaftspsychologie (BWW)', @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WP')),
+('BME',  'Mechatronik (BME)',                   @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'Ing')),
+('BMM',  'Marketing & Digitale Medien (BMM)',   @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WM')),
+('BPVP', 'Primary Care Management (BPVP)',      @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'GuS')),
+('BSA',  'Soziale Arbeit (BSA)',                @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'GuS')),
+('BST',  'Steuerrecht (BST)',                   @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WR')),
+('BWI',  'Wirtschaftsinformatik (BWI)',         @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'IT')),
+('BWK',  'Wirtschaftsrecht (BWK)',              @bachelor, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WR')),
+('MBA',  'Master of Business Administration (MBA)', @master, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WM')),
+('MBB',  'Business Consulting & Digital Mgmt (MBB)', @master, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'WM')),
+('MME_HSBO', 'Mechatronik + HSBO (MME_HSBO)',   @master, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'Ing')),
+('MMT_HSBO', 'Maschinenbau + HSBO (MMT_HSBO)',  @master, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'Ing')),
+('MWING', 'Wirtschaftsingenieurwesen (MWING)',  @master, (SELECT Id FROM RpStudiengangSteckbriefeHochschulbereich WHERE HsbCode = 'Ing'));
 
 -- ─── 4) RpStudiengangSteckbriefeProduktKuerzelAlias ──────────────────────────────
 INSERT INTO RpStudiengangSteckbriefeProduktKuerzelAlias (AliasPk, StudiengangId) VALUES

@@ -83,7 +83,7 @@ def _run_preload_background(app) -> None:
         try:
             hsbs = svc.get_studiengaenge()
         except Exception as e:
-            logger.error("Preload: get_studiengaenge fehlgeschlagen: %s", e)
+            logger.exception("Preload: get_studiengaenge fehlgeschlagen: %s", e)
             _preload_status["running"] = False
             return
 

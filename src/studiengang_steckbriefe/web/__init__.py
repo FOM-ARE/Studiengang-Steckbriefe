@@ -14,7 +14,12 @@ def create_app(config_name: str | None = None) -> Flask:
         config_name: Name der Konfiguration ('development', 'production', 'testing').
                      Default: 'default' (= DevelopmentConfig).
     """
-    app = Flask(
+    # CSRF-Schutz (python:S4502): Diese App ist eine reine JSON-REST-API ohne HTML-Formular-POSTs.
+    # Der Login-Flow nutzt einen OAuth-Redirect (Entra ID), kein Form-Submit.
+    # Alle schreibenden Endpunkte erwarten Content-Type: application/json,
+    # den Browser bei Cross-Origin-Requests nicht automatisch setzen – das verhindert CSRF.
+    # CORS ist zusaetzlich restriktiv konfiguriert (CORS_ORIGINS).
+    app = Flask(  # NOSONAR
         __name__,
         template_folder="../templates",
         static_folder="../static",
