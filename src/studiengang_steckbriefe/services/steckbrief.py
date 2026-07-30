@@ -197,6 +197,29 @@ def get_studiengaenge() -> list[dict]:
 # ===================================================================
 
 
+def _row_for_semester(rows: list[dict], jahr: int, typ: str) -> dict | None:
+    """Gibt die passende Zeile fuer Jahr und SemesterTyp zurueck."""
+    return next((r for r in rows if r["Jahr"] == jahr and r["SemesterTyp"] == typ), None)
+
+
+def _append_semester_werte(
+    ss: dict | None, ws: dict | None,
+    zeitreihe_ss: list, zeitreihe_ws: list,
+    fom_avg_ss: list, fom_avg_ws: list,
+    beginner_ss: list, beginner_ws: list,
+    beginner_fom_avg_ss: list, beginner_fom_avg_ws: list,
+) -> None:
+    """Haengt Werte fuer ein Jahres-SS/WS-Paar an alle Zeitreihenlisten an."""
+    zeitreihe_ss.append(int(ss["Gesamtstudierende_SG"]) if ss else 0)
+    zeitreihe_ws.append(int(ws["Gesamtstudierende_SG"]) if ws else 0)
+    fom_avg_ss.append(round(float(ss["Gesamtstudierende_FOM_Avg"])) if ss else 0)
+    fom_avg_ws.append(round(float(ws["Gesamtstudierende_FOM_Avg"])) if ws else 0)
+    beginner_ss.append(int(ss["Beginner_SG"]) if ss else 0)
+    beginner_ws.append(int(ws["Beginner_SG"]) if ws else 0)
+    beginner_fom_avg_ss.append(round(float(ss["Beginner_FOM_Avg"])) if ss else 0)
+    beginner_fom_avg_ws.append(round(float(ws["Beginner_FOM_Avg"])) if ws else 0)
+
+
 def _build_zeitreihe(rows: list[dict], jahre: list) -> tuple:
     """Baut Zeitreihen-Listen fuer SS und WS aus den Rohdaten."""
     zeitreihe_ss, zeitreihe_ws = [], []
@@ -205,17 +228,15 @@ def _build_zeitreihe(rows: list[dict], jahre: list) -> tuple:
     beginner_fom_avg_ss, beginner_fom_avg_ws = [], []
 
     for jahr in jahre:
-        ss = next((r for r in rows if r["Jahr"] == jahr and r["SemesterTyp"] == "SS"), None)
-        ws = next((r for r in rows if r["Jahr"] == jahr and r["SemesterTyp"] == "WS"), None)
-
-        zeitreihe_ss.append(int(ss["Gesamtstudierende_SG"]) if ss else 0)
-        zeitreihe_ws.append(int(ws["Gesamtstudierende_SG"]) if ws else 0)
-        fom_avg_ss.append(round(float(ss["Gesamtstudierende_FOM_Avg"])) if ss else 0)
-        fom_avg_ws.append(round(float(ws["Gesamtstudierende_FOM_Avg"])) if ws else 0)
-        beginner_ss.append(int(ss["Beginner_SG"]) if ss else 0)
-        beginner_ws.append(int(ws["Beginner_SG"]) if ws else 0)
-        beginner_fom_avg_ss.append(round(float(ss["Beginner_FOM_Avg"])) if ss else 0)
-        beginner_fom_avg_ws.append(round(float(ws["Beginner_FOM_Avg"])) if ws else 0)
+        ss = _row_for_semester(rows, jahr, "SS")
+        ws = _row_for_semester(rows, jahr, "WS")
+        _append_semester_werte(
+            ss, ws,
+            zeitreihe_ss, zeitreihe_ws,
+            fom_avg_ss, fom_avg_ws,
+            beginner_ss, beginner_ws,
+            beginner_fom_avg_ss, beginner_fom_avg_ws,
+        )
 
     return (
         zeitreihe_ss, zeitreihe_ws,
@@ -257,47 +278,44 @@ def _calc_beginner_delta(beginner_ss: list, beginner_ws: list) -> tuple[int, str
     return b_aktuell, f"{b_sign}{b_diff} ({b_sign}{b_pct}%)"
 
 
+def _hsz_apply_studierende(hsz_data: dict, hsz: str, jahr: int, r: dict) -> None:
+    """Traegt Studierenden- und Beginner-Werte fuer ein Semester in hsz_data ein."""
+    hsz_data[hsz].setdefault(jahr, {
+        "ss": 0, "ws": 0, "beginner_ss": 0, "beginner_ws": 0,
+        "avg_ss": 0, "avg_ws": 0, "avg_beginner_ss": 0, "avg_beginner_ws": 0,
+    })
+    if r["SemesterTyp"] == "SS":
+        hsz_data[hsz][jahr]["ss"] = int(r["Gesamtstudierende"])
+        hsz_data[hsz][jahr]["beginner_ss"] = int(r["Beginner"])
+    else:
+        hsz_data[hsz][jahr]["ws"] = int(r["Gesamtstudierende"])
+        hsz_data[hsz][jahr]["beginner_ws"] = int(r["Beginner"])
+
+
+def _hsz_apply_avg(hsz_data: dict, hsz: str, jahr: int, r: dict) -> None:
+    """Traegt Durchschnittswerte fuer ein Semester in hsz_data ein."""
+    if r["SemesterTyp"] == "SS":
+        hsz_data[hsz][jahr]["avg_ss"] = round(float(r["AvgStudierende"])) if r["AvgStudierende"] else 0
+        hsz_data[hsz][jahr]["avg_beginner_ss"] = round(float(r["AvgBeginner"])) if r["AvgBeginner"] else 0
+    else:
+        hsz_data[hsz][jahr]["avg_ws"] = round(float(r["AvgStudierende"])) if r["AvgStudierende"] else 0
+        hsz_data[hsz][jahr]["avg_beginner_ws"] = round(float(r["AvgBeginner"])) if r["AvgBeginner"] else 0
+
+
 def _build_hsz_data(hsz_rows: list[dict], hsz_avg_rows: list[dict]) -> dict:
     """Baut das HSZ-Detail-Dict aus Studierenden- und Durchschnittsdaten."""
     hsz_data: dict = {}
     for r in hsz_rows:
         hsz = r["Hochschulzentrum"]
-        jahr = r["Jahr"]
-        if hsz not in hsz_data:
-            hsz_data[hsz] = {}
-        if jahr not in hsz_data[hsz]:
-            hsz_data[hsz][jahr] = {
-                "ss": 0, "ws": 0,
-                "beginner_ss": 0, "beginner_ws": 0,
-                "avg_ss": 0, "avg_ws": 0,
-                "avg_beginner_ss": 0, "avg_beginner_ws": 0,
-            }
-        if r["SemesterTyp"] == "SS":
-            hsz_data[hsz][jahr]["ss"] = int(r["Gesamtstudierende"])
-            hsz_data[hsz][jahr]["beginner_ss"] = int(r["Beginner"])
-        else:
-            hsz_data[hsz][jahr]["ws"] = int(r["Gesamtstudierende"])
-            hsz_data[hsz][jahr]["beginner_ws"] = int(r["Beginner"])
+        hsz_data.setdefault(hsz, {})
+        _hsz_apply_studierende(hsz_data, hsz, r["Jahr"], r)
 
     for r in hsz_avg_rows:
         hsz = r["Hochschulzentrum"]
         jahr = r["Jahr"]
         if hsz not in hsz_data or jahr not in hsz_data[hsz]:
             continue
-        if r["SemesterTyp"] == "SS":
-            hsz_data[hsz][jahr]["avg_ss"] = (
-                round(float(r["AvgStudierende"])) if r["AvgStudierende"] else 0
-            )
-            hsz_data[hsz][jahr]["avg_beginner_ss"] = (
-                round(float(r["AvgBeginner"])) if r["AvgBeginner"] else 0
-            )
-        else:
-            hsz_data[hsz][jahr]["avg_ws"] = (
-                round(float(r["AvgStudierende"])) if r["AvgStudierende"] else 0
-            )
-            hsz_data[hsz][jahr]["avg_beginner_ws"] = (
-                round(float(r["AvgBeginner"])) if r["AvgBeginner"] else 0
-            )
+        _hsz_apply_avg(hsz_data, hsz, jahr, r)
     return hsz_data
 
 
