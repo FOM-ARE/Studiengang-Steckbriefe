@@ -59,7 +59,7 @@ class Config:
     ENTRA_CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET", "")
     ENTRA_AUTHORITY = _azure_authority(os.environ.get("AZURE_TENANT_ID", ""))
     ENTRA_REDIRECT_URI = os.environ.get(
-        "ENTRA_REDIRECT_URI", "http://localhost:5000/api/auth/callback"
+        "ENTRA_REDIRECT_URI", "http://localhost:5000/auth/callback"
     )
     # Entra ID Gruppen (Object-IDs fuer Token-Claims-basierte Rollenzuordnung)
     ENTRA_GROUP_ADMIN = os.environ.get("ENTRA_GROUP_ADMIN", "2392116c-4f38-4a3b-aaf3-87c5709328b1")
@@ -93,9 +93,7 @@ class DevelopmentConfig(Config):
     ENTRA_CLIENT_ID = AZURE_CLIENT_ID
     ENTRA_CLIENT_SECRET = AZURE_CLIENT_SECRET
     ENTRA_AUTHORITY = _azure_authority(AZURE_TENANT_ID)
-    ENTRA_REDIRECT_URI = (
-        "https://studiengangsteckbriefe-dev.srvs.bcw-intern.local/api/auth/callback"
-    )
+    ENTRA_REDIRECT_URI = "https://studiengangsteckbriefe-dev.srvs.bcw-intern.local/auth/callback"
 
 
 class StagingConfig(Config):
@@ -114,7 +112,7 @@ class StagingConfig(Config):
     ENTRA_CLIENT_ID = AZURE_CLIENT_ID
     ENTRA_CLIENT_SECRET = AZURE_CLIENT_SECRET
     ENTRA_AUTHORITY = _azure_authority(AZURE_TENANT_ID)
-    ENTRA_REDIRECT_URI = "https://steckbriefe-staging.bcw-intern.local/api/auth/callback"
+    ENTRA_REDIRECT_URI = "https://steckbriefe-staging.bcw-intern.local/auth/callback"
 
 
 class ProductionConfig(Config):
@@ -129,7 +127,7 @@ class ProductionConfig(Config):
     ENTRA_CLIENT_ID = AZURE_CLIENT_ID
     ENTRA_CLIENT_SECRET = AZURE_CLIENT_SECRET
     ENTRA_AUTHORITY = _azure_authority(AZURE_TENANT_ID)
-    ENTRA_REDIRECT_URI = "https://steckbriefe.fom.de/api/auth/callback"
+    ENTRA_REDIRECT_URI = "https://steckbriefe.fom.de/auth/callback"
 
     @classmethod
     def init_app(cls, app):

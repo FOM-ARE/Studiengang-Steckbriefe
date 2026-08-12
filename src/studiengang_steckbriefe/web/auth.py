@@ -58,7 +58,7 @@ def login():
         return redirect(url_for(LOGIN_PAGE, error="auth_failed"))
 
 
-@auth_bp.route("/api/auth/callback")
+@auth_bp.route("/auth/callback")
 def callback():
     """Verarbeitet den Callback von Microsoft nach erfolgreicher Anmeldung."""
     # State validieren (CSRF-Schutz)
