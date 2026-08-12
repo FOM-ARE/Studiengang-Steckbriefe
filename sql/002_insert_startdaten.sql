@@ -179,20 +179,24 @@ INSERT INTO RpStudiengangSteckbriefeEndpunktParameter (EndpunktCode, ParamName, 
 -- ─── 7) RpStudiengangSteckbriefeFilterliste ──────────────────────────────────────
 
 -- Typ-Konstanten (vermeiden duplizierter Literale – plsql:S1192)
-SET @incl = 'INCLUDE';
-SET @excl = 'EXCLUDE';
+SET @incl               = 'INCLUDE';
+SET @excl               = 'EXCLUDE';
+SET @hsb_exclude        = 'HSB_EXCLUDE';
+SET @vertiefung_art     = 'VERTIEFUNG_ART';
+SET @ue_raumid          = 'UE_RAUMID';
+SET @dual_studienformat = 'DUAL_STUDIENFORMAT';
 
 -- HSB-Kuerzel die in der Studiengangliste ausgeschlossen werden
 INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ, Beschreibung) VALUES
-('HSB_EXCLUDE', 'OBS',      @excl, 'Online Business School ausblenden'),
-('HSB_EXCLUDE', 'eufom BS', @excl, 'eufom ausblenden'),
-('HSB_EXCLUDE', '',         @excl, 'Leere HSB ausblenden');
+(@hsb_exclude, 'OBS',      @excl, 'Online Business School ausblenden'),
+(@hsb_exclude, 'eufom BS', @excl, 'eufom ausblenden'),
+(@hsb_exclude, '',         @excl, 'Leere HSB ausblenden');
 
 -- Vertiefungsrichtungen: erlaubte Modulcontainer-Arten
 INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ) VALUES
-('VERTIEFUNG_ART', 'Vertiefungsrichtung', @incl),
-('VERTIEFUNG_ART', 'Wahlpflichtmodul',   @incl),
-('VERTIEFUNG_ART', 'Wahlmodul',          @incl);
+(@vertiefung_art, 'Vertiefungsrichtung', @incl),
+(@vertiefung_art, 'Wahlpflichtmodul',   @incl),
+(@vertiefung_art, 'Wahlmodul',          @incl);
 
 -- Vertiefungsrichtungen: ausgeschlossene Fachgebiete
 INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ) VALUES
@@ -201,11 +205,11 @@ INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ) VALUES
 
 -- UE-Berechnung: ausgeschlossene Raum-IDs
 INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ, Beschreibung) VALUES
-('UE_RAUMID', '274',  @excl, 'Testbuchungs-Raeume'),
-('UE_RAUMID', '285',  @excl, NULL),
-('UE_RAUMID', '349',  @excl, NULL),
-('UE_RAUMID', '845',  @excl, NULL),
-('UE_RAUMID', '1608', @excl, NULL);
+(@ue_raumid, '274',  @excl, 'Testbuchungs-Raeume'),
+(@ue_raumid, '285',  @excl, NULL),
+(@ue_raumid, '349',  @excl, NULL),
+(@ue_raumid, '845',  @excl, NULL),
+(@ue_raumid, '1608', @excl, NULL);
 
 -- UE-Berechnung: ausgeschlossene Veranstaltungstypen
 INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ) VALUES
@@ -236,9 +240,9 @@ INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ) VALUES
 
 -- Duale Studierende: Studienformate die als dual gelten
 INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ) VALUES
-('DUAL_STUDIENFORMAT', 'ausbildungsintegrierend', @incl),
-('DUAL_STUDIENFORMAT', 'berufsintegrierend',      @incl),
-('DUAL_STUDIENFORMAT', 'berufsbegleitend +',      @incl);
+(@dual_studienformat, 'ausbildungsintegrierend', @incl),
+(@dual_studienformat, 'berufsintegrierend',      @incl),
+(@dual_studienformat, 'berufsbegleitend +',      @incl);
 
 -- Duale Studierende: Bildungsabschnitt-Bedingung
 INSERT INTO RpStudiengangSteckbriefeFilterliste (Bereich, Wert, Typ) VALUES
