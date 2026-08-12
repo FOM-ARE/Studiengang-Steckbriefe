@@ -59,7 +59,7 @@ class Config:
     ENTRA_CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET", "")
     ENTRA_AUTHORITY = _azure_authority(os.environ.get("AZURE_TENANT_ID", ""))
     ENTRA_REDIRECT_URI = os.environ.get(
-        "ENTRA_REDIRECT_URI", "http://localhost:5000/auth/callback"
+        "ENTRA_REDIRECT_URI", "http://localhost:5000/api/auth/callback"
     )
     # Entra ID Gruppen (Object-IDs fuer Token-Claims-basierte Rollenzuordnung)
     ENTRA_GROUP_ADMIN = os.environ.get("ENTRA_GROUP_ADMIN", "2392116c-4f38-4a3b-aaf3-87c5709328b1")
