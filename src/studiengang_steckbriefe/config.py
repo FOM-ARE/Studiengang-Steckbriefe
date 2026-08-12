@@ -127,7 +127,7 @@ class ProductionConfig(Config):
     ENTRA_CLIENT_ID = AZURE_CLIENT_ID
     ENTRA_CLIENT_SECRET = AZURE_CLIENT_SECRET
     ENTRA_AUTHORITY = _azure_authority(AZURE_TENANT_ID)
-    ENTRA_REDIRECT_URI = "https://steckbriefe.fom.de/auth/callback"
+    ENTRA_REDIRECT_URI = "https://studiengangsteckbriefe.srvs.bcw-intern.local/auth/callback"
 
     @classmethod
     def init_app(cls, app):
