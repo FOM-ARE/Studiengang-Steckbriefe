@@ -112,6 +112,7 @@ class StagingConfig(Config):
     ENTRA_CLIENT_ID = AZURE_CLIENT_ID
     ENTRA_CLIENT_SECRET = AZURE_CLIENT_SECRET
     ENTRA_AUTHORITY = _azure_authority(AZURE_TENANT_ID)
+    ENTRA_REDIRECT_URI = "https://steckbriefe-staging.bcw-intern.local/api/auth/callback"
 
 
 class ProductionConfig(Config):
@@ -126,6 +127,7 @@ class ProductionConfig(Config):
     ENTRA_CLIENT_ID = AZURE_CLIENT_ID
     ENTRA_CLIENT_SECRET = AZURE_CLIENT_SECRET
     ENTRA_AUTHORITY = _azure_authority(AZURE_TENANT_ID)
+    ENTRA_REDIRECT_URI = "https://steckbriefe.fom.de/api/auth/callback"
 
     @classmethod
     def init_app(cls, app):
