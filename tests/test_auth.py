@@ -52,7 +52,7 @@ def test_callback_state_mismatch_redirect(client):
     """Callback mit falschem State leitet zur Login-Seite."""
     with client.session_transaction() as sess:
         sess["auth_state"] = "correct-state"
-    response = client.get("/auth/callback?state=wrong-state&code=abc")
+    response = client.get("/api/auth/callback?state=wrong-state&code=abc")
     assert response.status_code == 302
     assert "invalid_state" in response.headers["Location"]
 
@@ -61,7 +61,7 @@ def test_callback_kein_code_redirect(client):
     """Callback ohne Code leitet zur Login-Seite."""
     with client.session_transaction() as sess:
         sess["auth_state"] = "state-abc"
-    response = client.get("/auth/callback?state=state-abc")
+    response = client.get("/api/auth/callback?state=state-abc")
     assert response.status_code == 302
     assert "auth_failed" in response.headers["Location"]
 
@@ -75,7 +75,7 @@ def test_callback_value_error_redirect(client):
     mock_auth = MagicMock()
     mock_auth.acquire_token.side_effect = ValueError("Token abgelaufen")
     with patch("studiengang_steckbriefe.web.auth.EntraIdAuth", return_value=mock_auth):
-        response = client.get("/auth/callback?state=state-abc&code=xyz")
+        response = client.get("/api/auth/callback?state=state-abc&code=xyz")
     assert response.status_code == 302
     assert "auth_failed" in response.headers["Location"]
 
@@ -89,7 +89,7 @@ def test_callback_exception_redirect(client):
     mock_auth = MagicMock()
     mock_auth.acquire_token.side_effect = RuntimeError("Netzwerkfehler")
     with patch("studiengang_steckbriefe.web.auth.EntraIdAuth", return_value=mock_auth):
-        response = client.get("/auth/callback?state=state-abc&code=xyz")
+        response = client.get("/api/auth/callback?state=state-abc&code=xyz")
     assert response.status_code == 302
     assert "auth_failed" in response.headers["Location"]
 
@@ -109,7 +109,7 @@ def test_callback_keine_rolle_redirect(client):
             "studiengang_steckbriefe.web.auth.get_role_from_token_claims", return_value=None
         ):
             with patch("studiengang_steckbriefe.web.auth.get_user_role", return_value=None):
-                response = client.get("/auth/callback?state=state-abc&code=xyz")
+                response = client.get("/api/auth/callback?state=state-abc&code=xyz")
     assert response.status_code == 302
     assert "no_permission" in response.headers["Location"]
 
@@ -139,7 +139,7 @@ def test_callback_ruft_graph_api_wenn_kein_groups_claim(client):
                 else None
             ),
         ):
-            response = client.get("/auth/callback?state=state-abc&code=xyz")
+            response = client.get("/api/auth/callback?state=state-abc&code=xyz")
 
     mock_auth.fetch_user_groups.assert_called_once_with("graph-access-token")
     assert response.status_code == 302
@@ -163,7 +163,7 @@ def test_callback_kein_access_token_kein_graph_api_call(client):
             "studiengang_steckbriefe.web.auth.get_role_from_token_claims", return_value=None
         ):
             with patch("studiengang_steckbriefe.web.auth.get_user_role", return_value="read"):
-                response = client.get("/auth/callback?state=state-abc&code=xyz")
+                response = client.get("/api/auth/callback?state=state-abc&code=xyz")
 
     mock_auth.fetch_user_groups.assert_not_called()
     assert response.status_code == 302
@@ -187,7 +187,7 @@ def test_callback_erfolgreicher_login_via_gruppe(client):
         with patch(
             "studiengang_steckbriefe.web.auth.get_role_from_token_claims", return_value="admin"
         ):
-            response = client.get("/auth/callback?state=state-abc&code=xyz")
+            response = client.get("/api/auth/callback?state=state-abc&code=xyz")
     assert response.status_code == 302
     with client.session_transaction() as sess:
         assert sess["user"]["role"] == "admin"
@@ -209,7 +209,7 @@ def test_callback_erfolgreicher_login_via_db_fallback(client):
             "studiengang_steckbriefe.web.auth.get_role_from_token_claims", return_value=None
         ):
             with patch("studiengang_steckbriefe.web.auth.get_user_role", return_value="read"):
-                response = client.get("/auth/callback?state=state-abc&code=xyz")
+                response = client.get("/api/auth/callback?state=state-abc&code=xyz")
     assert response.status_code == 302
     with client.session_transaction() as sess:
         assert sess["user"]["role"] == "read"
@@ -233,6 +233,6 @@ def test_callback_db_fehler_redirect(client):
                 "studiengang_steckbriefe.web.auth.get_user_role",
                 side_effect=Exception("DB down"),
             ):
-                response = client.get("/auth/callback?state=state-abc&code=xyz")
+                response = client.get("/api/auth/callback?state=state-abc&code=xyz")
     assert response.status_code == 302
     assert "db_error" in response.headers["Location"]

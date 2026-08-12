@@ -93,7 +93,7 @@ class DevelopmentConfig(Config):
     ENTRA_CLIENT_ID = AZURE_CLIENT_ID
     ENTRA_CLIENT_SECRET = AZURE_CLIENT_SECRET
     ENTRA_AUTHORITY = _azure_authority(AZURE_TENANT_ID)
-    ENTRA_REDIRECT_URI = "https://studiengangsteckbriefe-dev.srvs.bcw-intern.local/auth/callback"
+    ENTRA_REDIRECT_URI = "https://studiengangsteckbriefe-dev.srvs.bcw-intern.local/api/auth/callback"
 
 
 class StagingConfig(Config):
