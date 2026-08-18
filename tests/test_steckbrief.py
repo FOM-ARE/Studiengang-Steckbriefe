@@ -137,10 +137,7 @@ class TestFetchTop10Firmen:
 
 class TestGetZuzahler:
     def _zuz_rows(self, sems=("2024-WS", "2025-SS")):
-        return [
-            {"Semesterkuerzel": s, "Total": 100, "Zuzahler": 20}
-            for s in sems
-        ]
+        return [{"Semesterkuerzel": s, "Total": 100, "Zuzahler": 20} for s in sems]
 
     def test_gibt_erwartete_struktur_zurueck(self):
         """get_zuzahler liefert alle Pflichtfelder im Ergebnis-Dict."""
