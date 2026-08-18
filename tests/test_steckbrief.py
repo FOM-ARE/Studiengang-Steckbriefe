@@ -70,7 +70,7 @@ class TestFetchTop10Firmen:
         assert result == []
 
     def test_filtert_muell_firmennamen(self):
-        """Namen die mit ',' oder 'z. Hd.' beginnen oder kuerzer als 3 Zeichen sind, werden gefiltert."""
+        """Namen mit ',', 'z. Hd.' oder Laenge < 3 werden gefiltert."""
         from studiengang_steckbriefe.services.steckbrief import _fetch_top10_firmen
 
         rows = [
