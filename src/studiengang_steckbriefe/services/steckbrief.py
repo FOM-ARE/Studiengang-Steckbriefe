@@ -11,7 +11,12 @@ from datetime import date
 
 from studiengang_steckbriefe.services import config_db, queries
 from studiengang_steckbriefe.services.cache import cache_get, cache_set
-from studiengang_steckbriefe.services.db_connector import query_db, query_db_multi
+from studiengang_steckbriefe.services.db_connector import (
+    get_connection,
+    query_db,
+    query_db_multi,
+    release_connection,
+)
 
 # ===================================================================
 # Hilfsfunktionen
@@ -1240,8 +1245,181 @@ def get_herkunft(produktkuerzel: str) -> dict:
 # ===================================================================
 
 
+def _fetch_top10_firmen(produktkuerzel: str, all_semesters: list[str]) -> list[dict]:
+    """Ermittelt Top-10-Zuzahler-Firmen via Temp-Tabellen auf einer Connection.
+
+    Args:
+        produktkuerzel: Basis-Produktkuerzel des Studiengangs.
+        all_semesters: Liste der Semesterkuerzel (sortiert).
+
+    Returns:
+        Liste von {name, werte} Dicts fuer die Top 10 Firmen.
+    """
+    variants = expand_pk(produktkuerzel)
+    pk_placeholders = ",".join("?" * len(variants))
+
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 1) #gs_zuz: Gesamtstudierende (PK-gefiltert)
+        try:
+            cursor.execute("DROP TABLE IF EXISTS #gs_zuz")
+        except Exception:
+            pass
+        cursor.execute("""CREATE TABLE #gs_zuz (
+            Semesterkuerzel VARCHAR(10), StudienEintragID INT,
+            PersonenFID INT, Nachname NVARCHAR(200), SemesterStart DATE
+        )""")
+        cursor.execute(f"""
+            INSERT INTO #gs_zuz
+            SELECT DISTINCT
+                sz.Semesterkuerzel, se.StudienEintragID, se.PersonenFID, p.Nachname,
+                CASE WHEN RIGHT(sz.Semesterkuerzel, 2) = 'SS'
+                    THEN CAST(CONCAT(LEFT(sz.Semesterkuerzel, 4), '-03-01') AS DATE)
+                    ELSE CAST(CONCAT(LEFT(sz.Semesterkuerzel, 4), '-09-01') AS DATE)
+                END
+            FROM BCW_DWH.dwh.StudierendenStatusJeSemester sz
+            INNER JOIN BCW_DWH.dwh.StudienEintraege se ON se.StudienEintragID = sz.StudienEintragFID
+            INNER JOIN BCW_DWH.dwh.Lehrgaenge l ON l.LehrgangsID = se.LehrgangsFID
+            INNER JOIN BCW_DWH.dwh.Personen p ON p.PersonenID = se.PersonenFID
+            INNER JOIN BCW_DWH.dwh.StatusGruppen sg ON sg.Status = sz.Status
+            WHERE l.Institut = 'FOM' AND p.Testperson = 0
+              AND sg.StatusGruppe = 'Gesamtstudierende mit UV'
+              AND CAST(LEFT(sz.Semesterkuerzel, 4) AS INT) >= YEAR(GETDATE()) - 4
+              AND sz.Semesterkuerzel <= CONCAT(YEAR(GETDATE()),
+                  CASE WHEN MONTH(GETDATE()) >= 9 THEN '-WS' ELSE '-SS' END)
+              AND l.Hochschulzentrum NOT IN ('Bangalore','Pune','Ahmedabad','Sofia','Venlo','Luxemburg')
+              AND l.Ausrichtung = 'national'
+              AND l.Produktkuerzel IN ({pk_placeholders})
+        """, variants)
+
+        # 2) #zuz: Zuzahler mit FirmenFID
+        try:
+            cursor.execute("DROP TABLE IF EXISTS #zuz")
+        except Exception:
+            pass
+        cursor.execute("""CREATE TABLE #zuz (
+            Semesterkuerzel VARCHAR(10), StudienEintragID INT, FirmenFID INT
+        )""")
+        cursor.execute("""
+            INSERT INTO #zuz
+            SELECT gs.Semesterkuerzel, gs.StudienEintragID,
+                COALESCE(
+                    CASE WHEN ztn.FirmenFID > 0 THEN ztn.FirmenFID END,
+                    CASE WHEN r_match.FirmenFID > 0 THEN r_match.FirmenFID END
+                ) AS FirmenFID
+            FROM #gs_zuz gs
+            LEFT JOIN BCW_STA.mariadb.t_ZahlungenTn ztn
+                ON ztn.StudiengaengeTNID = gs.StudienEintragID
+                AND gs.SemesterStart BETWEEN TRY_CAST(ztn.LaufzeitVon AS DATE)
+                    AND TRY_CAST(ztn.LaufzeitBis AS DATE)
+                AND ztn.KostenUebernahmeDurch = 'Arbeitgeber'
+            LEFT JOIN (
+                SELECT r.RechnungsID, r.PersonenFID, r.FirmenFID,
+                       TRY_CAST(r.VonTeilnahme AS DATE) AS VonTeilnahme,
+                       TRY_CAST(r.BisTeilnahme AS DATE) AS BisTeilnahme,
+                       TRY_CAST(r.Ausgeschieden AS DATE) AS Ausgeschieden,
+                       r.RechEmpfaenger
+                FROM BCW_STA.mariadb.t_rechnungen r
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM BCW_STA.mariadb.t_rechnungen_deaktiviert d
+                    WHERE d.RechnungsFID = r.RechnungsID
+                )
+                AND r.MatrikelNr <> r.DebitorenNr
+                AND LTRIM(RTRIM(r.RechEmpfaenger)) NOT IN ('Mitarbeiter')
+            ) r_match ON r_match.PersonenFID = gs.PersonenFID
+                AND r_match.VonTeilnahme <= gs.SemesterStart
+                AND r_match.BisTeilnahme >= gs.SemesterStart
+                AND r_match.Ausgeschieden >= gs.SemesterStart
+                AND gs.Nachname IS NOT NULL AND gs.Nachname <> ''
+                AND LTRIM(RTRIM(r_match.RechEmpfaenger)) NOT LIKE '%' + gs.Nachname + '%'
+            WHERE (ztn.ID IS NOT NULL OR r_match.RechnungsID IS NOT NULL)
+        """)
+
+        # 3) Top 10 Firmen (mit Namens-Deduplizierung)
+        cursor.execute("""
+            WITH firma_sem AS (
+                SELECT z.FirmenFID, z.Semesterkuerzel,
+                       COUNT(DISTINCT z.StudienEintragID) AS Anzahl
+                FROM #zuz z
+                WHERE z.FirmenFID IS NOT NULL AND z.FirmenFID > 0
+                GROUP BY z.FirmenFID, z.Semesterkuerzel
+            ),
+            firma_namen AS (
+                SELECT fs.FirmenFID, fs.Semesterkuerzel, fs.Anzahl,
+                    LTRIM(RTRIM(REPLACE(REPLACE(f.Firmenname, CHAR(13)+CHAR(10), ' '),
+                        CHAR(10), ' '))) AS Firmenname
+                FROM firma_sem fs
+                INNER JOIN BCW_STA.mariadb.t_firmen f ON f.FirmenID = fs.FirmenFID
+                WHERE f.Firmenname IS NOT NULL
+                  AND LEN(LTRIM(RTRIM(f.Firmenname))) >= 3
+                  AND f.Firmenname NOT LIKE ',%'
+                  AND f.Firmenname NOT LIKE '%, z. Hd.%'
+                  AND f.Firmenname NOT LIKE CHAR(10) + '%'
+            ),
+            merged AS (
+                SELECT Firmenname, Semesterkuerzel,
+                       SUM(Anzahl) AS Anzahl
+                FROM firma_namen
+                GROUP BY Firmenname, Semesterkuerzel
+            ),
+            firma_total AS (
+                SELECT Firmenname, SUM(Anzahl) AS GesamtAnzahl
+                FROM merged
+                GROUP BY Firmenname
+            ),
+            top10 AS (
+                SELECT TOP 15 Firmenname, GesamtAnzahl
+                FROM firma_total
+                ORDER BY GesamtAnzahl DESC
+            )
+            SELECT t.Firmenname, m.Semesterkuerzel, m.Anzahl
+            FROM top10 t
+            LEFT JOIN merged m ON m.Firmenname = t.Firmenname
+            ORDER BY t.GesamtAnzahl DESC, t.Firmenname, m.Semesterkuerzel
+        """)
+        columns_t = [col[0] for col in cursor.description]
+        top10_rows = [dict(zip(columns_t, row, strict=False)) for row in cursor.fetchall()]
+
+        # Cleanup
+        try:
+            cursor.execute("DROP TABLE IF EXISTS #zuz; DROP TABLE IF EXISTS #gs_zuz")
+        except Exception:
+            pass
+    finally:
+        release_connection(conn)
+
+    # Top10 aufbereiten: { name, werte[] } pro Firma
+    top10: list[dict] = []
+    if top10_rows:
+        current_name = None
+        current_werte: dict = {}
+        for r in top10_rows:
+            name = (r["Firmenname"] or "").strip()
+            if not name or name.startswith(",") or name.startswith("z. Hd.") or len(name) < 3:
+                continue
+            if name != current_name:
+                if current_name is not None:
+                    top10.append({
+                        "name": current_name,
+                        "werte": [current_werte.get(s, None) for s in all_semesters],
+                    })
+                current_name = name
+                current_werte = {}
+            current_werte[r["Semesterkuerzel"]] = int(r["Anzahl"])
+        if current_name is not None:
+            top10.append({
+                "name": current_name,
+                "werte": [current_werte.get(s, None) for s in all_semesters],
+            })
+        top10 = top10[:10]
+
+    return top10
+
+
 def get_zuzahler(produktkuerzel: str) -> dict:
-    """Berechnet Zuzahler-Anteil und Top-10-Berufe.
+    """Berechnet Zuzahler-Anteil und Top-10-Firmen.
 
     Args:
         produktkuerzel: Basis-Produktkuerzel des Studiengangs.
@@ -1290,12 +1468,15 @@ def get_zuzahler(produktkuerzel: str) -> dict:
         zuz = sum(int(r.get("Zuzahler", 0) or 0) for r in fom_sem)
         fom_pct.append(round(zuz / max(gesamt, 1) * 100, 1))
 
+    # Top 10 Firmen laden
+    top10 = _fetch_top10_firmen(produktkuerzel, semester)
+
     data = {
         "semester": semester_labels,
         "absolut": sg_zuzahler,
         "pct_sg": sg_pct,
         "pct_fom": fom_pct,
-        "top10": [],
+        "top10": top10,
         "gesamtergebnis": sg_zuzahler,
     }
     cache_set(cache_key, data)
