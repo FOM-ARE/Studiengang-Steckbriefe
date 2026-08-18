@@ -56,7 +56,6 @@ omit = [
     "wsgi.py",
     "vergleich_logik.py",
     "test_new_query.py",
-    "src/studiengang_steckbriefe/services/steckbrief.py",
     "src/studiengang_steckbriefe/services/queries.py",
 ]
 
