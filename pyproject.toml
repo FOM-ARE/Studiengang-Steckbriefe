@@ -84,6 +84,5 @@ indent-style = "space"
 exclude = [
     "src/studiengang_steckbriefe/services/queries.py",
     "src/studiengang_steckbriefe/services/steckbrief.py",
-    "tests/test_steckbrief.py",
     ".github/**",
 ]
