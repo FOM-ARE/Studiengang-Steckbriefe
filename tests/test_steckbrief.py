@@ -1,4 +1,4 @@
-﻿"""Tests fuer services/steckbrief.py - Zuzahler Top-10-Logik."""
+"""Tests fuer services/steckbrief.py - Zuzahler Top-10-Logik."""
 
 from unittest.mock import MagicMock, patch
 
