@@ -59,62 +59,26 @@ _preload_status: dict = {"running": False, "done": 0, "total": 0, "errors": []}
 
 
 def _run_preload_background(app) -> None:
-    """Fuehrt den Cache-Warmup im Hintergrund-Thread aus."""
-    import logging
+    """Fuehrt den Cache-Warmup im Hintergrund-Thread aus.
 
-    from studiengang_steckbriefe.services import steckbrief as svc
+    Nutzt dieselbe Warmup-Logik wie der Scheduler (`warmup_all_steckbriefe`),
+    damit Scheduler und manueller Refresh identisch vollstaendig laufen.
+    """
+    from studiengang_steckbriefe.services.steckbrief import warmup_all_steckbriefe
 
-    logger = logging.getLogger(__name__)
+    _preload_status["done"] = 0
+    _preload_status["total"] = 0
+    _preload_status["errors"] = []
 
-    _ENDPOINTS = [
-        svc.get_trends,
-        svc.get_stammdaten,
-        svc.get_studienerfolg,
-        svc.get_uebergang,
-        svc.get_herkunft,
-        svc.get_zuzahler,
-        svc.get_vertiefungsrichtungen,
-        svc.get_rahmendaten,
-        svc.get_aktive_hszen,
-        svc.get_anrechnungen,
-    ]
+    def _on_progress(done: int, total: int) -> None:
+        _preload_status["done"] = done
+        _preload_status["total"] = total
 
-    with app.app_context():
-        try:
-            hsbs = svc.get_studiengaenge()
-        except Exception as e:
-            logger.exception("Preload: get_studiengaenge fehlgeschlagen: %s", e)
-            _preload_status["running"] = False
-            return
-
-        all_pks: list[str] = sorted(
-            {
-                sg.get("produktkuerzel")
-                for hsb in hsbs
-                for sg in hsb.get("programmes", [])
-                if sg.get("produktkuerzel")
-            }
-        )
-        _preload_status["total"] = len(all_pks) * len(_ENDPOINTS)
-        _preload_status["done"] = 0
-        _preload_status["errors"] = []
-
-        for pk in all_pks:
-            for fn in _ENDPOINTS:
-                try:
-                    fn(pk)
-                except Exception as e:
-                    _preload_status["errors"].append(f"{fn.__name__}({pk}): {e}")
-                    logger.warning("Preload %s(%s): %s", fn.__name__, pk, e)
-                _preload_status["done"] += 1
-
+    try:
+        result = warmup_all_steckbriefe(app, on_progress=_on_progress)
+        _preload_status["errors"] = result["errors"]
+    finally:
         _preload_status["running"] = False
-        logger.info(
-            "Preload abgeschlossen: %d/%d, %d Fehler",
-            _preload_status["done"],
-            _preload_status["total"],
-            len(_preload_status["errors"]),
-        )
 
 
 @cache_mgmt_bp.route("/api/cache/preload", methods=["POST"])

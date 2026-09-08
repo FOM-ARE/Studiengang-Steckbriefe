@@ -136,7 +136,7 @@ class TestRunPreloadBackground:
         import studiengang_steckbriefe.web.cache_mgmt as cm
         from studiengang_steckbriefe.web.cache_mgmt import _run_preload_background
 
-        hsb_data = [{"programmes": [{"produktkuerzel": "BBA"}]}]
+        hsb_data = [{"programmes": [{"kurzname": "BBA"}]}]
         mock_fn = MagicMock()
 
         with (
@@ -168,7 +168,7 @@ class TestRunPreloadBackground:
         import studiengang_steckbriefe.web.cache_mgmt as cm
         from studiengang_steckbriefe.web.cache_mgmt import _run_preload_background
 
-        hsb_data = [{"programmes": [{"produktkuerzel": "BBA"}]}]
+        hsb_data = [{"programmes": [{"kurzname": "BBA"}]}]
 
         def fail_trends(pk):
             raise RuntimeError("fail")
@@ -197,7 +197,7 @@ class TestRunPreloadBackground:
 
         assert cm._preload_status["running"] is False
         assert len(cm._preload_status["errors"]) == 1
-        assert "fail_trends" in cm._preload_status["errors"][0]
+        assert "get_trends" in cm._preload_status["errors"][0]
 
     def test_success(self, authenticated_client):
         """Preload antwortet sofort mit 200 und startet Hintergrund-Thread."""

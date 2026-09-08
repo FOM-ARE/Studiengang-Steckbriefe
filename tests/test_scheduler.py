@@ -40,29 +40,53 @@ class TestInitScheduler:
 
     def test_thread_name(self, app):
         init_scheduler(app)
-        assert sched_mod._scheduler_thread.name == "daily-cache-reload"
+        assert sched_mod._scheduler_thread.name == "weekly-cache-reload"
+
+
+class TestNextRunTime:
+    def test_naechster_sonntag_07(self):
+        """_next_run_time gibt den naechsten Sonntag 07:00 zurueck."""
+        from datetime import datetime
+
+        # Mittwoch 2026-09-09 10:00 -> naechster Sonntag = 2026-09-13 07:00
+        result = sched_mod._next_run_time(datetime(2026, 9, 9, 10, 0))
+        assert result == datetime(2026, 9, 13, 7, 0)
+
+    def test_sonntag_vor_07_ist_heute(self):
+        """Sonntag frueh vor 07:00 -> Reload heute 07:00."""
+        from datetime import datetime
+
+        result = sched_mod._next_run_time(datetime(2026, 9, 13, 6, 0))
+        assert result == datetime(2026, 9, 13, 7, 0)
+
+    def test_sonntag_nach_07_ist_naechste_woche(self):
+        """Sonntag nach 07:00 -> Reload naechsten Sonntag."""
+        from datetime import datetime
+
+        result = sched_mod._next_run_time(datetime(2026, 9, 13, 8, 0))
+        assert result == datetime(2026, 9, 20, 7, 0)
 
 
 class TestWarmupCache:
-    def test_warmup_laedt_studiengaenge(self, app):
-        """_warmup_cache ruft get_studiengaenge im App-Context auf."""
+    def test_warmup_ruft_warmup_all_auf(self, app):
+        """_warmup_cache delegiert an warmup_all_steckbriefe."""
         import studiengang_steckbriefe.services.scheduler as sched_mod
 
         sched_mod._flask_app = app
         with patch(
-            "studiengang_steckbriefe.services.steckbrief.get_studiengaenge",
-            return_value=[{"name": "WM"}],
-        ) as mock_get:
+            "studiengang_steckbriefe.services.steckbrief.warmup_all_steckbriefe",
+            return_value={"total": 10, "done": 10, "errors": []},
+        ) as mock_warmup:
             sched_mod._warmup_cache()
-        mock_get.assert_called_once()
+        mock_warmup.assert_called_once_with(app)
 
     def test_warmup_schluckt_exception(self, app):
-        """_warmup_cache wirft keine Exception wenn get_studiengaenge fehlschlaegt."""
+        """_warmup_cache wirft keine Exception wenn warmup_all_steckbriefe fehlschlaegt."""
         import studiengang_steckbriefe.services.scheduler as sched_mod
 
         sched_mod._flask_app = app
         with patch(
-            "studiengang_steckbriefe.services.steckbrief.get_studiengaenge",
+            "studiengang_steckbriefe.services.steckbrief.warmup_all_steckbriefe",
             side_effect=RuntimeError("DB down"),
         ):
             sched_mod._warmup_cache()  # darf nicht werfen
