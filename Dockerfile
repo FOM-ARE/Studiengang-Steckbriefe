@@ -15,9 +15,10 @@ WORKDIR /app
 
 # ODBC Driver fuer SQL Server
 # Key-Download per Python statt curl/gnupg2: keine Hilfspakete, die spaeter per purge entfernt werden muessten
+# libgssapi-krb5-2: von msodbcsql17 benoetigt, aber nicht als Abhaengigkeit deklariert
 RUN apt-get update \
     && apt-get upgrade -y \
-    && apt-get install -y --no-install-recommends unixodbc-dev \
+    && apt-get install -y --no-install-recommends unixodbc-dev libgssapi-krb5-2 \
     && python -c "import urllib.request; urllib.request.urlretrieve('https://packages.microsoft.com/keys/microsoft.asc', '/usr/share/keyrings/microsoft-prod.asc')" \
     && echo "deb [signed-by=/usr/share/keyrings/microsoft-prod.asc] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/mssql-release.list \
     && apt-get update \
