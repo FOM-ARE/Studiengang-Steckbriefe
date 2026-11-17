@@ -70,6 +70,16 @@ def load_keyvault_secrets(app):
         except Exception:
             app.logger.warning("Secret 'dwh-user' nicht im Key Vault gefunden")
 
+        # DWH-API Schluessel (Secret heisst 'DWH-API' im Key Vault)
+        try:
+            app.config["DWH_API_KEY"] = client.get_secret("DWH-API").value
+            app.logger.info("DWH-API: Authentifizierungs-Key aus Key Vault geladen")
+        except Exception:
+            app.logger.warning(
+                "Secret 'DWH-API' nicht im Key Vault gefunden - "
+                "DWH-API Connector wird nicht funktionieren"
+            )
+
         app.logger.info("Key Vault Secrets erfolgreich geladen")
 
     except Exception as exc:
